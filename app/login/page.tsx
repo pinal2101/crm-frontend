@@ -41,13 +41,33 @@ export default function LoginPage() {
     if (!validateForm()) return
 
     setIsLoading(true)
-
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
+    try{
+      const res=await fetch("http://localhost:8081/api/v1/auth/login",{
+        method:'POST',
+        headers:{
+          "Content-Type":"application/json",
+        },
+        body:JSON.stringify({email,password}),
+      })
+      const data=await res.json()
+      if(!res.ok || !data.success){
+        throw new Error(data.message || "Login Failed")
+      }
+      localStorage.setItem("token",data.token)
       router.push("/dashboard/leads")
-    }, 1000)
-  }
+    }catch(err:any){
+      alert(err.message)
+      }finally{
+        setIsLoading(false)
+      }
+    }
+
+  //   // Simulate API call
+  //   setTimeout(() => {
+  //     setIsLoading(false)
+  //     router.push("/dashboard/leads")
+  //   }, 1000)
+  // }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
