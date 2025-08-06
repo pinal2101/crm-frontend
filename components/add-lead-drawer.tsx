@@ -55,7 +55,6 @@ export function AddLeadDrawer({ open, onOpenChange, onSubmit }: AddLeadDrawerPro
 
     setIsSubmitting(true)
 
-    // Simulate API call
     setTimeout(() => {
       onSubmit(formData)
       setFormData({
