@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {  toast } from "sonner"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -41,33 +42,31 @@ export default function LoginPage() {
     if (!validateForm()) return
 
     setIsLoading(true)
-    try{
-      const res=await fetch("http://localhost:8081/api/v1/auth/login",{
-        method:'POST',
-        headers:{
-          "Content-Type":"application/json",
+    try {
+      const res = await fetch("http://localhost:8081/api/v1/auth/login", {
+        method: 'POST',
+        headers: {
+          "Content-Type": "application/json",
         },
-        body:JSON.stringify({email,password}),
+        body: JSON.stringify({ email, password }),
       })
-      const data=await res.json()
-      if(!res.ok || !data.success){
+      const data = await res.json()
+      if (!res.ok || !data.success) {
         throw new Error(data.message || "Login Failed")
       }
-      localStorage.setItem("token",data.token)
-      router.push("/dashboard/leads")
-    }catch(err:any){
-      alert(err.message)
-      }finally{
-        setIsLoading(false)
+      localStorage.setItem("token", data.token)
+      toast.success("Login successful ✅"), {
+        duration: 3000,
+        position: "top-center",
+        dismissible: true,
       }
+      router.push("/dashboard/leads")
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong ❌")
+    } finally {
+      setIsLoading(false)
     }
-
-  //   // Simulate API call
-  //   setTimeout(() => {
-  //     setIsLoading(false)
-  //     router.push("/dashboard/leads")
-  //   }, 1000)
-  // }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -109,5 +108,6 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+
   )
 }

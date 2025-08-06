@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
+import { Toaster } from 'sonner'
 
 export const metadata: Metadata = {
   title: 'v0 App',
@@ -25,6 +26,7 @@ html {
 }
         `}</style>
       </head>
+       <Toaster position="top-center" richColors closeButton />
       <body>{children}</body>
     </html>
   )
