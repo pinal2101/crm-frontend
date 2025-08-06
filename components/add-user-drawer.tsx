@@ -1,14 +1,13 @@
 "use client"
-
 import type React from "react"
-
+import { Toaster, toast } from "sonner"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+
 
 interface AddUserDrawerProps {
   open: boolean
@@ -18,14 +17,12 @@ interface AddUserDrawerProps {
 
 export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerProps) {
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: '',
+    lastName: '',
     email: "",
-    role: "user",
-    status: "active",
-    department: "",
-    phone: "",
-    countryCode: "+1",
-    notes: "",
+    phoneNumber: '',
+    password: '',
+    role: "Admin",
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -33,9 +30,9 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required"
-    }
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required"
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required"
+
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
@@ -43,9 +40,9 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
       newErrors.email = "Email is invalid"
     }
 
-    if (!formData.department.trim()) {
-      newErrors.department = "Department is required"
-    }
+    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required"
+    if (!formData.password.trim()) newErrors.password = "Password is required"
+
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -58,40 +55,87 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      onSubmit(formData)
+    try {
+      
+      const res = await fetch("http://localhost:8081/api/v1/auth/register", {
+        method: "POST", 
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+    
+      })
+      console.log(formData,"ytyt")
+
+     const data = await res.json()
+
+      if (!res.ok) {
+      const backendErrors: Record<string, string> = {}
+
+      if (Array.isArray(data.errors)) {
+        data.errors.forEach((msg: string) => {
+          if (msg.toLowerCase().includes("first name")) {
+            backendErrors.firstName = msg
+          } else if (msg.toLowerCase().includes("last name")) {
+            backendErrors.lastName = msg
+          } else if (msg.toLowerCase().includes("email")) {
+            backendErrors.email = msg
+          } else if (msg.toLowerCase().includes("phone")) {
+            backendErrors.phoneNumber = msg
+          } else if (msg.toLowerCase().includes("password")) {
+            backendErrors.password = msg
+          }
+        })
+      }
+
+      setErrors(backendErrors)
+
+      if (Object.keys(backendErrors).length === 0) {
+         toast.error(data.message || "Something went wrong ❌")
+      }
+      return
+    }
+       toast.success("User registered successfully! ✅"), {
+              duration: 3000,
+              position: "top-center",
+              dismissible: true,
+            }
+ 
+      onSubmit(data.user)
       setFormData({
-        name: "",
+        firstName: '',
+        lastName: '',
         email: "",
-        role: "user",
-        status: "active",
-        department: "",
-        phone: "",
-        countryCode: "+1",
-        notes: "",
+        phoneNumber: '',
+        password: '',
+        role: "Admin",
       })
       setErrors({})
+      onOpenChange(false)
+     } catch (error: any) {
+       console.error("Error during registration:", error.message)
+      toast.error(error.message || "Registration failed")
+    } finally {
       setIsSubmitting(false)
-    }, 500)
+    }
   }
+
 
   const handleCancel = () => {
     setFormData({
-      name: "",
+      firstName: '',
+      lastName: '',
       email: "",
-      role: "user",
-      status: "active",
-      department: "",
-      phone: "",
-      countryCode: "+1",
-      notes: "",
+      phoneNumber: '',
+      password: '',
+      role: "Admin",
     })
     setErrors({})
     onOpenChange(false)
   }
 
   return (
+  <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[400px] sm:w-[540px]">
         <SheetHeader>
@@ -100,18 +144,27 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter full name"
-              className={errors.name ? "border-red-500" : ""}
-            />
-            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                placeholder="Enter first name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                placeholder="Enter last name"
+              />
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email Address *</Label>
             <Input
@@ -124,6 +177,29 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
             />
             {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
           </div>
+             <div className="space-y-2">
+            <Label htmlFor="phoneNumber">Phone Number *</Label>
+            <Input
+              id="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+              placeholder="Enter phone number"
+              className={errors.phoneNumber ? "border-red-500" : ""}
+            />
+            {errors.phoneNumber && <p className="text-sm text-red-500">{errors.phoneNumber}</p>}
+          </div>
+           <div className="space-y-2">
+            <Label htmlFor="password">Password *</Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="Enter password"
+              className={errors.password ? "border-red-500" : ""}
+            />
+            {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -133,88 +209,12 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                  <SelectItem value="SuperAdmin">SuperAdmin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="department">Department *</Label>
-            <Input
-              id="department"
-              value={formData.department}
-              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-              placeholder="Enter department"
-              className={errors.department ? "border-red-500" : ""}
-            />
-            {errors.department && <p className="text-sm text-red-500">{errors.department}</p>}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="countryCode">Country Code</Label>
-              <Select
-                value={formData.countryCode}
-                onValueChange={(value) => setFormData({ ...formData, countryCode: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select code" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="+1">🇺🇸 +1 (US)</SelectItem>
-                  <SelectItem value="+1">🇨🇦 +1 (CA)</SelectItem>
-                  <SelectItem value="+44">🇬🇧 +44 (UK)</SelectItem>
-                  <SelectItem value="+33">🇫🇷 +33 (FR)</SelectItem>
-                  <SelectItem value="+49">🇩🇪 +49 (DE)</SelectItem>
-                  <SelectItem value="+39">🇮🇹 +39 (IT)</SelectItem>
-                  <SelectItem value="+34">🇪🇸 +34 (ES)</SelectItem>
-                  <SelectItem value="+31">🇳🇱 +31 (NL)</SelectItem>
-                  <SelectItem value="+91">🇮🇳 +91 (IN)</SelectItem>
-                  <SelectItem value="+86">🇨🇳 +86 (CN)</SelectItem>
-                  <SelectItem value="+81">🇯🇵 +81 (JP)</SelectItem>
-                  <SelectItem value="+61">🇦🇺 +61 (AU)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Enter phone number"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Add any additional notes..."
-              rows={4}
-            />
-          </div>
-
           <div className="flex justify-end space-x-3 pt-6">
             <Button type="button" variant="outline" onClick={handleCancel}>
               Cancel
@@ -226,5 +226,6 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
         </form>
       </SheetContent>
     </Sheet>
+  </>
   )
 }
