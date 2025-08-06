@@ -26,8 +26,10 @@ html {
 }
         `}</style>
       </head>
-       <Toaster position="top-center" richColors closeButton />
-      <body>{children}</body>
-    </html>
+        <body>
+    {children}
+    <Toaster position="top-center" richColors closeButton />
+  </body>
+    </html> 
   )
 }
