@@ -33,7 +33,6 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
     if (!formData.firstName.trim()) newErrors.firstName = "First name is required"
     if (!formData.lastName.trim()) newErrors.lastName = "Last name is required"
 
-
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -56,22 +55,17 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
     setIsSubmitting(true)
 
     try {
-      
       const res = await fetch("http://localhost:8081/api/v1/auth/register", {
         method: "POST", 
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-    
       })
       console.log(formData,"ytyt")
-
      const data = await res.json()
-
       if (!res.ok) {
       const backendErrors: Record<string, string> = {}
-
       if (Array.isArray(data.errors)) {
         data.errors.forEach((msg: string) => {
           if (msg.toLowerCase().includes("first name")) {
@@ -87,9 +81,7 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
           }
         })
       }
-
       setErrors(backendErrors)
-
       if (Object.keys(backendErrors).length === 0) {
          toast.error(data.message || "Something went wrong ❌")
       }
@@ -118,9 +110,7 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit }: AddUserDrawerPro
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-
+  }                               
   const handleCancel = () => {
     setFormData({
       firstName: '',

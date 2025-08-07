@@ -26,7 +26,7 @@ html {
 }
         `}</style>
       </head>
-       <Toaster position="top-center" richColors closeButton />
+       <Toaster position="top-center" richColors />
       <body>{children}</body>
     </html>
   )
