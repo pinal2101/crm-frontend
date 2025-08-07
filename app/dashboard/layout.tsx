@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { UsersIcon, User, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { toast } from "sonner"
 
 export default function DashboardLayout({
   children,
@@ -16,8 +17,27 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const router = useRouter()
 
-  const handleLogout = () => {
-    router.push("/login")
+  const handleLogout = async() => {
+   const token =localStorage.getItem("token")
+   try{
+    const res =await fetch("http://localhost:8081/api/v1/auth/logout",{
+      method:'POST',
+      headers:{
+        "Content-Type":"application/json",
+        Authorization:token?? "",
+      }
+    })
+    const data =await res.json()
+    if(res.ok){
+      toast.success("Logout Successful ✅")
+    }else{
+      toast.error(`logout Failed:${data.message}`)
+    }
+   }catch(error){
+    toast.error("Something went wrong during logout ❌:")
+   }
+   localStorage.removeItem("token")
+   router.push('/login')
   }
 
   const handleEditProfile = () => {

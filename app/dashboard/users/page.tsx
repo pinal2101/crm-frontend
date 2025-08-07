@@ -10,7 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from '@/components/ui/badge'
 import { toast } from "sonner"
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+
 
 type User = {
   _id: string;
@@ -37,6 +45,9 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<User | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+
 
   useEffect(() => {
     fetchUsers()
@@ -211,43 +222,10 @@ export default function UsersPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600"
-                        onClick={async () => {
-                          try {
-                            const token = localStorage.getItem("token") || ""
-                            const res = await fetch(`http://localhost:8081/api/v1/auth/delete/${u._id}`, {
-                              method: "DELETE",
-                              headers: {
-                                "Content-Type": "application/json",
-                                Authorization: token,
-                              },
-                            })
-                            if (!res.ok) {
-                              const errText = await res.text()
-                              throw new Error(errText)
-                            }
-                            setUsers(users.filter(x => x._id !== u._id))
-                            toast.success("Your Profile is Deleted  ✅"), {
-                              duration: 3000,
-                              position: "top-center",
-                              dismissible: true,
-                            }
-                            const newUsers = users.filter(x => x._id !== u._id);
-                            setUsers(newUsers);
-                            const remainingUsers = newUsers.length;
-                            const lastPage = Math.ceil(remainingUsers / 3);
-
-                            if(currentPage>lastPage){
-                              setCurrentPage(lastPage||1);
-                            }else{
-                              setCurrentPage(currentPage);
-                            }
-                            fetchUsers();
-
-                          } catch (err) {
-                            console.error("Delete failed:", err)
-                            toast.error("Something went wrong ❌")
-                          }
-                        }}
+                      onClick={() => {
+                        setUserToDelete(u)
+                        setConfirmDelete(true)
+                      }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
@@ -278,7 +256,6 @@ export default function UsersPage() {
           >  Nextn</Button>
         </div>
       </div>
-
       <AddUserDrawer
         open={isDrawerOpen}
         onOpenChange={(open) => {
@@ -289,13 +266,68 @@ export default function UsersPage() {
         }}
         onSubmit={handleAddUser}
       />
-
       <EditUserDrawer
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
         userData={editUser}
         onSave={handleUpdateUser}
       />
+            {confirmDelete && userToDelete && (
+        <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Delete User</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>
+                Are you sure you want to delete <strong>{userToDelete.firstName} {userToDelete.lastName}</strong>?
+              </p>
+            </div>
+            <DialogFooter className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  try {
+                    const token = localStorage.getItem("token") || ""
+                    const res = await fetch(`http://localhost:8081/api/v1/auth/delete/${userToDelete._id}`, {
+                      method: "DELETE",
+                      headers: {
+                        "Content-Type": "application/json",
+                        Authorization: token,
+                      },
+                    })
+                    if (!res.ok) {
+                      const errText = await res.text()
+                      throw new Error(errText)
+                    }
+                    const usersPerPage=10;
+                    const newUsers = users.filter(x => x._id !== userToDelete._id)
+                    setUsers(newUsers)
+                    toast.success("User deleted successfully ✅")
+
+                    const remainingUsers = newUsers.length
+                    const lastPage = Math.ceil(remainingUsers / usersPerPage)
+                    if (currentPage > lastPage) {
+                      setCurrentPage(lastPage || 1)
+                    }
+                    fetchUsers()
+                    setConfirmDelete(false)
+                    setUserToDelete(null)
+                  } catch (err) {
+                    console.error("Delete failed:", err)
+                    toast.error("Something went wrong ❌")
+                    setConfirmDelete(false)
+                  }
+                }}
+              > Yes, Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
