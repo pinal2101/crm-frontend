@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Node modules
 node_modules/
 
@@ -29,3 +30,52 @@ build/
 
 # Optional: local development files
 .local
+=======
+# Node.js dependencies
+node_modules/
+
+# Output of 'next build'
+.next/
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment variables
+.env
+.env.local
+
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Optional: If you're using VS Code
+.vscode/
+
+# Optional: If you're using JetBrains IDEs (WebStorm, etc.)
+.idea/
+
+# Build output for custom scripts
+dist/
+
+# Coverage reports
+coverage/
+
+# Optional: lock file depending on package manager (choose the one you use)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Optional: next export output
+out/
+
+# Optional: logs
+*.log
+
+# Optional: test cache
+jest-cache/
+jest.config.js
+>>>>>>> c1a42e9717dcfd8107dcc20e060cff162c880be1

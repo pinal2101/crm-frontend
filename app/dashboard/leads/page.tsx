@@ -1,100 +1,252 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Plus, Search, Filter } from "lucide-react"
-import { AddLeadDrawer } from "@/components/add-lead-drawer"
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Filter } from "lucide-react";
+import axios, { CancelTokenSource } from "axios";
 
-// Mock data
-const mockLeads = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+1 (555) 123-4567",
-    status: "new",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane@example.com",
-    phone: "+1 (555) 987-6543",
-    status: "contacted",
-    createdAt: "2024-01-14",
-  },
-  {
-    id: 3,
-    name: "Bob Johnson",
-    email: "bob@example.com",
-    phone: "+1 (555) 456-7890",
-    status: "qualified",
-    createdAt: "2024-01-13",
-  },
-  {
-    id: 4,
-    name: "Alice Brown",
-    email: "alice@example.com",
-    phone: "+1 (555) 321-0987",
-    status: "converted",
-    createdAt: "2024-01-12",
-  },
-  {
-    id: 5,
-    name: "Charlie Wilson",
-    email: "charlie@example.com",
-    phone: "+1 (555) 654-3210",
-    status: "lost",
-    createdAt: "2024-01-11",
-  },
-]
+const statusColors: Record<string, string> = {
+  ACTIVE: "bg-blue-100 text-blue-800",
+  INACTIVE: "bg-yellow-100 text-yellow-800",
+};
 
-const statusColors = {
-  new: "bg-blue-100 text-blue-800",
-  contacted: "bg-yellow-100 text-yellow-800",
-  qualified: "bg-green-100 text-green-800",
-  converted: "bg-purple-100 text-purple-800",
-  lost: "bg-red-100 text-red-800",
+const priorityOptions = ["HIGH", "MEDIUM", "LOW"];
+
+function parseJwt(token: string) {
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("Invalid JWT:", error);
+    return null;
+  }
+}
+
+interface Lead {
+  _id: string;
+  email: string;
+  firstName: string;
+  whatsUpNumber: number;
+  status: string;
+  priority: string;
+  createdDate: string;
+  websiteURL: string;
+  linkdinURL: string;
+  workEmail: string;
+  userId?: string;
 }
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState(mockLeads)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-  const leadsPerPage = 10
+  const router = useRouter();
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    email: "",
+    firstName: "",
+    websiteURL: "",
+    linkdinURL: "",
+    industry: "",
+    whatsUpNumber: "",
+    status: "ACTIVE",
+    workEmail: "",
+    userId: "",
+    priority: "HIGH",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const leadsPerPage = 10;
+  const cancelTokenRef = useRef<CancelTokenSource | null>(null);
 
-  // Filter leads based on search and status
-  const filteredLeads = leads.filter((lead) => {
-    const matchesSearch =
-      lead.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || lead.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
-
-  // Pagination
-  const totalPages = Math.ceil(filteredLeads.length / leadsPerPage)
-  const startIndex = (currentPage - 1) * leadsPerPage
-  const paginatedLeads = filteredLeads.slice(startIndex, startIndex + leadsPerPage)
-
-  const handleAddLead = (newLead: any) => {
-    const lead = {
-      id: leads.length + 1,
-      ...newLead,
-      createdAt: new Date().toISOString().split("T")[0],
+  // ---- Fetch Leads ----
+  const fetchLeads = async (page = 1) => {
+    if (cancelTokenRef.current) {
+      cancelTokenRef.current.cancel("superseded");
     }
-    setLeads([lead, ...leads])
-    setIsDrawerOpen(false)
-  }
+    const source = axios.CancelToken.source();
+    cancelTokenRef.current = source;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params: any = {
+        page,
+        limit: leadsPerPage,
+      };
+      if (searchTerm) params.search = searchTerm;
+      if (statusFilter !== "all") params.status = statusFilter;
+
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const client = axios.create({
+        baseURL: process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081",
+        headers: {
+          Authorization: token ? ` ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      });
+
+      const resp = await client.get("/api/v1/lead", {
+        params,
+        cancelToken: source.token,
+      });
+
+      setLeads(resp.data.data || []);
+      setTotalPages(resp.data.meta?.totalPages || 1);
+      setTotalLeads(resp.data.meta?.total || 0);
+      setCurrentPage(resp.data.meta?.currentPage || page);
+    } catch (e: any) {
+      if (!axios.isCancel(e)) {
+        console.error("Fetch error", e);
+        if (e.response?.status === 401) {
+          router.push("/login");
+        } else {
+          setError("Failed to load leads");
+        }
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads(1);
+  }, [searchTerm, statusFilter]);
+
+  useEffect(() => {
+    fetchLeads(currentPage);
+  }, [currentPage]);
+
+  // ---- Add Lead ----
+  const handleAddLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setError(null);
+
+    const token = localStorage.getItem("token");
+    let userId = "";
+
+    if (token) {
+      const decoded = parseJwt(token);
+      userId = decoded?.userId || decoded?._id || "";
+    }
+
+    if (!userId) {
+      setError("User ID missing. Please log in again.");
+      setCreating(false);
+      router.push("/login");
+      return;
+    }
+
+    if (
+      !form.email ||
+      !form.firstName ||
+      !form.websiteURL ||
+      !form.linkdinURL ||
+      !form.industry ||
+      !form.whatsUpNumber ||
+      !form.workEmail
+    ) {
+      setError("Please fill all required fields.");
+      setCreating(false);
+      return;
+    }
+
+    const payload = {
+      email: form.email.trim(),
+      firstName: form.firstName.trim(),
+      websiteURL: form.websiteURL.trim(),
+      linkdinURL: form.linkdinURL.trim(),
+      industry: form.industry.trim(),
+      whatsUpNumber: Number(form.whatsUpNumber),
+      status: form.status,
+      workEmail: form.workEmail.trim(),
+      userId,
+      priority: form.priority,
+    };
+
+    try {
+      const client = axios.create({
+        baseURL: process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081",
+        headers: {
+          Authorization: token ? ` ${token}` : "",
+          "Content-Type": "application/json",
+        },
+      });
+
+      const res = await client.post("/api/v1/lead", payload);
+
+      setLeads((prev) => [res.data.data, ...prev]);
+      setTotalLeads((prev) => prev + 1);
+      setIsDrawerOpen(false);
+      setForm({
+        email: "",
+        firstName: "",
+        websiteURL: "",
+        linkdinURL: "",
+        industry: "",
+        whatsUpNumber: "",
+        status: "ACTIVE",
+        workEmail: "",
+        userId: "",
+        priority: "HIGH",
+      });
+    } catch (err: any) {
+      console.error("Create lead error", err);
+      if (err.response) {
+        setError(
+          err.response.data.message ||
+            JSON.stringify(err.response.data) ||
+            "Lead creation failed"
+        );
+        if (err.response.status === 401) {
+          router.push("/login");
+        }
+      } else {
+        setError("No response from server. Check network or backend.");
+      }
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const startIndex = (currentPage - 1) * leadsPerPage + 1;
+  const endIndex = Math.min(currentPage * leadsPerPage, totalLeads);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
         <Button onClick={() => setIsDrawerOpen(true)}>
@@ -103,76 +255,103 @@ export default function LeadsPage() {
         </Button>
       </div>
 
-      {/* Filters */}
+      {/* Search and Filter */}
       <div className="flex items-center space-x-4">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             placeholder="Search leads..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => {
+            setStatusFilter(v);
+            setCurrentPage(1);
+          }}
+        >
           <SelectTrigger className="w-48">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="new">New</SelectItem>
-            <SelectItem value="contacted">Contacted</SelectItem>
-            <SelectItem value="qualified">Qualified</SelectItem>
-            <SelectItem value="converted">Converted</SelectItem>
-            <SelectItem value="lost">Lost</SelectItem>
+            <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="INACTIVE">Inactive</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
+      {error && <div className="text-red-600">{error}</div>}
+
       {/* Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+            <div>Loading...</div>
+          </div>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
+              <TableHead>WhatsApp</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Priority</TableHead>
               <TableHead>Created At</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedLeads.map((lead) => (
-              <TableRow key={lead.id}>
-                <TableCell className="font-medium">{lead.name}</TableCell>
+            {leads.map((lead) => (
+              <TableRow key={lead._id}>
+                <TableCell className="font-medium">{lead.firstName}</TableCell>
                 <TableCell>{lead.email}</TableCell>
-                <TableCell>{lead.phone}</TableCell>
+                <TableCell>{lead.whatsUpNumber}</TableCell>
                 <TableCell>
-                  <Badge className={statusColors[lead.status as keyof typeof statusColors]}>
-                    {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+                  <Badge
+                    className={
+                      statusColors[lead.status] || "bg-gray-100 text-gray-800"
+                    }
+                  >
+                    {lead.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{lead.createdAt}</TableCell>
+                <TableCell>{lead.priority}</TableCell>
+                <TableCell>
+                  {new Date(lead.createdDate).toLocaleDateString()}
+                </TableCell>
               </TableRow>
             ))}
+            {!loading && leads.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-6">
+                  No leads found.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {totalLeads > 0 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-700">
-            Showing {startIndex + 1} to {Math.min(startIndex + leadsPerPage, filteredLeads.length)} of{" "}
-            {filteredLeads.length} results
+            Showing {startIndex} to {endIndex} of {totalLeads} results
           </p>
           <div className="flex items-center space-x-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1 || loading}
             >
               Previous
             </Button>
@@ -182,8 +361,8 @@ export default function LeadsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || loading}
             >
               Next
             </Button>
@@ -191,7 +370,138 @@ export default function LeadsPage() {
         </div>
       )}
 
-      <AddLeadDrawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen} onSubmit={handleAddLead} />
+      {/* Add Lead Drawer */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 bg-black/30 flex justify-end z-10">
+          <div className="w-full max-w-md bg-white p-6 overflow-auto">
+            <h2 className="text-xl font-semibold mb-4">Add Lead</h2>
+            <form onSubmit={handleAddLead} className="space-y-3">
+              <div>
+                <label className="block text-sm">First Name</label>
+                <Input
+                  required
+                  value={form.firstName}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, firstName: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm">Email</label>
+                <Input
+                  required
+                  type="email"
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, email: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm">WhatsApp Number</label>
+                <Input
+                  required
+                  type="tel"
+                  value={form.whatsUpNumber}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, whatsUpNumber: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm">Website URL</label>
+                <Input
+                  required
+                  value={form.websiteURL}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, websiteURL: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm">LinkedIn URL</label>
+                <Input
+                  required
+                  value={form.linkdinURL}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, linkdinURL: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm">Industry</label>
+                <Input
+                  required
+                  value={form.industry}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, industry: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm">Work Email</label>
+                <Input
+                  required
+                  type="email"
+                  value={form.workEmail}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, workEmail: e.target.value }))
+                  }
+                />
+              </div>
+              <div>
+                <label className="block text-sm">Status</label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, status: v }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ACTIVE">ACTIVE</SelectItem>
+                    <SelectItem value="INACTIVE">INACTIVE</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm">Priority</label>
+                <Select
+                  value={form.priority}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, priority: v }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priorityOptions.map((p) => (
+                      <SelectItem key={p} value={p}>
+                        {p}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex space-x-2">
+                <Button type="submit" disabled={creating}>
+                  {creating ? "Creating..." : "Create Lead"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsDrawerOpen(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+              {error && <div className="text-sm text-red-600">{error}</div>}
+            </form>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
