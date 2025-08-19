@@ -1,169 +1,187 @@
-"use client"
+'use client';
+import React, { useState } from 'react';
+import {
+  Drawer,
+  Box,
+  TextField,
+  Button,
+  Typography,
+  IconButton,
+  Divider,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import axios from 'axios';
 
-import type React from "react"
+const drawerWidth = 400;
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-
-interface AddLeadDrawerProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSubmit: (lead: any) => void
-}
-
-export function AddLeadDrawer({ open, onOpenChange, onSubmit }: AddLeadDrawerProps) {
+export default function AddLeadDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    status: "new",
-    notes: "",
-  })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {}
-
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required"
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid"
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Phone is required"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    firstName: '',
+    lastName: '',
+    email: '',
+    websiteURL: '',
+    linkdinURL: '',
+    whatsUpNumber: '',
+    status: '',
+    workEmail: '',
+    userId: '',
+    priority: '',
+  });
+  // const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!validateForm()) return
-
-    setIsSubmitting(true)
-
-    setTimeout(() => {
-      onSubmit(formData)
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        status: "new",
-        notes: "",
-      })
-      setErrors({})
-      setIsSubmitting(false)
-    }, 500)
-  }
-
-  const handleCancel = () => {
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      status: "new",
-      notes: "",
-    })
-    setErrors({})
-    onOpenChange(false)
-  }
+    try {
+      const res = await axios.post('/api/leads', formData);
+      console.log('Lead created:', res.data);
+      onClose(); // close the drawer after submission
+    } catch (error) {
+      console.error('Error adding lead:', error);
+    }
+  };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
-        <SheetHeader>
-          <SheetTitle>Add New Lead</SheetTitle>
-          <SheetDescription>Fill in the information below to add a new lead to your database.</SheetDescription>
-        </SheetHeader>
+    <Drawer anchor="right" open={open} onClose={onClose}>
+      <Box
+        sx={{
+          width: drawerWidth,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Header */}
+        <Box
+          sx={{
+            px: 3,
+            py: 2,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottom: '1px solid #e0e0e0',
+          }}
+        >
+          <Typography variant="h6" noWrap>
+            Add New Lead
+          </Typography>
+          <IconButton onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Enter full name"
-              className={errors.name ? "border-red-500" : ""}
-            />
-            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
-          </div>
+        {/* Form Content */}
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{
+            p: 3,
+            flex: 1,
+            overflowY: 'auto',
+          }}
+        >
+          <TextField
+            label="First Name"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="Last Name"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="Email"
+            name="email"
+            value={formData.email}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            type="email"
+          />
+          <TextField
+            label="Work Email"
+            name="workEmail"
+            value={formData.workEmail}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            type="email"
+          />
+          <TextField
+            label="Website URL"
+            name="websiteURL"
+            value={formData.websiteURL}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="LinkedIn URL"
+            name="linkdinURL"
+            value={formData.linkdinURL}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="WhatsApp Number"
+            name="whatsUpNumber"
+            value={formData.whatsUpNumber}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            type="tel"
+          />
+          <TextField
+            label="Status"
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="Priority"
+            name="priority"
+            value={formData.priority}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+          <TextField
+            label="User ID"
+            name="userId"
+            value={formData.userId}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+            InputProps={{
+              readOnly: true,
+            }}
+          />
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="Enter email address"
-              className={errors.email ? "border-red-500" : ""}
-            />
-            {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone *</Label>
-            <Input
-              id="phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="Enter phone number"
-              className={errors.phone ? "border-red-500" : ""}
-            />
-            {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="contacted">Contacted</SelectItem>
-                <SelectItem value="qualified">Qualified</SelectItem>
-                <SelectItem value="converted">Converted</SelectItem>
-                <SelectItem value="lost">Lost</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Add any additional notes..."
-              rows={4}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-6">
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Submit"}
-            </Button>
-          </div>
-        </form>
-      </SheetContent>
-    </Sheet>
-  )
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            sx={{ mt: 3 }}
+          >
+            Add Lead
+          </Button>
+        </Box>
+      </Box>
+    </Drawer>
+  );
 }

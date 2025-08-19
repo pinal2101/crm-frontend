@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
 import './globals.css'
-import { Toaster } from 'sonner'
+import toast, { Toaster } from "react-hot-toast";
+
 
 export const metadata: Metadata = {
   title: 'v0 App',
@@ -26,8 +27,11 @@ html {
 }
         `}</style>
       </head>
-       <Toaster position="top-center" richColors />
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+
+      </body>
     </html>
   )
 }
