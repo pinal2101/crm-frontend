@@ -9,15 +9,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from '@/components/ui/badge'
 import { toast } from "sonner"
+import { useRouter } from "next/navigation";
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, } from "@/components/ui/dialog"
 
 
 type User = {
@@ -40,34 +35,41 @@ export default function UsersPage() {
   const [filteredUsers, setFilteredUsers] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
+  const [loading, setLoading] = useState(true)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editUser, setEditUser] = useState<User | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 3;
   const [totalPages, setTotalPages] = useState(1)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const router = useRouter();
 
-
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
+  // Fetch User Api
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem("token") || ""
       const params = new URLSearchParams();
       params.append("page", currentPage.toString())
-      params.append("limit", "3")
+      params.append("limit", pageSize.toString())
       if (searchTerm) params.append("search", searchTerm);
       if (roleFilter !== "all") params.append("role", roleFilter);
-      const res = await fetch(`http://localhost:8081/api/v1/auth/listUsers?${params.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-      })
+      const res = await fetch(
+        `http://localhost:8081/api/v1/auth/listUsers?${params.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        })
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        toast.error("Session expired. Please log in again.");
+        router.push("/login");
+        return;
+      }
       if (!res.ok) {
         const errorText = await res.text()
         throw new Error(`Error ${res.status}: ${errorText}`)
@@ -77,12 +79,17 @@ export default function UsersPage() {
       setTotalPages(data.totalPages || 1)
     } catch (err) {
       console.error("Fetch error:", err)
+      toast.error("Failed to fetch users.");
     }
   };
 
+  //Initial & dependency fetch
+  useEffect(() => {
+    fetchUsers()
+  }, [currentPage, searchTerm, roleFilter])
 
-
-  const filterUsers = () => {
+  //Filtering
+  useEffect(() => {
     const filtered = users.filter(user => {
       const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
       const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
@@ -91,8 +98,9 @@ export default function UsersPage() {
       return matchesSearch && matchesRole;
     });
     setFilteredUsers(filtered);
-  };
+  }, [searchTerm, roleFilter, users])
 
+  //Update User
   const handleUpdateUser = async (updatedUser: User) => {
     try {
       const token = localStorage.getItem("token") || "";
@@ -123,6 +131,7 @@ export default function UsersPage() {
     }
   };
 
+  //Add User
   const handleAddUser = (newUser: any) => {
     const name = `${newUser.firstName} ${newUser.lastName}`.trim()
     const userToAdd = {
@@ -136,22 +145,6 @@ export default function UsersPage() {
     setUsers(prev => [userToAdd, ...prev]);
     setIsDrawerOpen(false);
   }
-  useEffect(() => {
-    fetchUsers()
-  }, [currentPage, searchTerm, roleFilter])
-
-  useEffect(() => {
-    const filtered = users.filter(user => {
-      const matchesSearch =
-        user.firstname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.lastname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesRole =
-        roleFilter === 'all' || user?.role?.toLowerCase() === roleFilter.toLowerCase();
-      return matchesSearch && matchesRole;
-    });
-    setFilteredUsers(filtered);
-  }, [searchTerm, roleFilter, users]);
 
   return (
     <div className="space-y-6 p-4">
@@ -178,8 +171,9 @@ export default function UsersPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="SuperAdmin">SuperAdmin</SelectItem>
+            <SelectItem value="Admin">Admin</SelectItem>
+            <SelectItem value="Superadmin">Superadmin</SelectItem>
+
           </SelectContent>
         </Select>
       </div>
@@ -222,10 +216,10 @@ export default function UsersPage() {
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-red-600"
-                      onClick={() => {
-                        setUserToDelete(u)
-                        setConfirmDelete(true)
-                      }}
+                        onClick={() => {
+                          setUserToDelete(u)
+                          setConfirmDelete(true)
+                        }}
                       >
                         <Trash2 className="mr-2 h-4 w-4" /> Delete
                       </DropdownMenuItem>
@@ -237,22 +231,27 @@ export default function UsersPage() {
         </TableBody>
 
       </Table>
-      <div className="flex justify-between items-center mt-4 px-2">
-        <p>Showing {users.length > 0 ? `${(currentPage - 1) * 3 + 1} to ${(currentPage - 1) * 3 + users.length}` : 0} of {totalPages * 3} results</p>
+      <div className="flex justify-between items-center mt-4  space-x-2">
+        <p className='text-sm text-gray-600'>
+          Showing{" "}
+          {users.length > 0 ?
+            `${(currentPage - 1) * pageSize + 1} to ${(currentPage - 1) * pageSize + users.length}`
+            : 0}{" "}
+          of {totalPages} results</p>
         <div className="flex items-center space-x-2">
           <Button
-            variant="outline"
-            size="sm"
             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
             disabled={currentPage === 1}
+            className='px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50'
           >Previous
           </Button>
-          <p>Page {currentPage} of {totalPages}</p>
+
+          <span className='text-sm text-gray-600'>Page {currentPage} of {totalPages}</span>
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
             disabled={currentPage === totalPages}
+            className='px-3 py-1 bg-gray-200 text-gray-700 rounded disabled:opacity-50'
           >  Nextn</Button>
         </div>
       </div>
@@ -272,7 +271,7 @@ export default function UsersPage() {
         userData={editUser}
         onSave={handleUpdateUser}
       />
-            {confirmDelete && userToDelete && (
+      {confirmDelete && userToDelete && (
         <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
           <DialogContent>
             <DialogHeader>
@@ -303,7 +302,7 @@ export default function UsersPage() {
                       const errText = await res.text()
                       throw new Error(errText)
                     }
-                    const usersPerPage=10;
+                    const usersPerPage = 10;
                     const newUsers = users.filter(x => x._id !== userToDelete._id)
                     setUsers(newUsers)
                     toast.success("User deleted successfully ✅")

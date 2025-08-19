@@ -17,6 +17,7 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const router = useRouter()
 
+
   const handleLogout = async() => {
    const token =localStorage.getItem("token")
    try{
@@ -37,6 +38,7 @@ export default function DashboardLayout({
     toast.error("Something went wrong during logout ❌:")
    }
    localStorage.removeItem("token")
+   
    router.push('/login')
   }
 

@@ -41,7 +41,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
+
 
 # Local environment variables
 .env
@@ -67,7 +67,7 @@ coverage/
 # Optional: lock file depending on package manager (choose the one you use)
 # package-lock.json
 # yarn.lock
-# pnpm-lock.yaml
+
 
 # Optional: next export output
 out/
