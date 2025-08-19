@@ -2,25 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import EditLeadDrawer from '@/components/EditLeadDrawer'
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import toast, { Toaster } from "react-hot-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import axios, { CancelTokenSource } from "axios";
 
 const statusColors: Record<string, string> = {
@@ -69,7 +59,9 @@ export default function LeadsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editLead, setEditLead] = useState<Lead | null>(null)
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -163,7 +155,7 @@ export default function LeadsPage() {
     }
 
     if (!userId) {
-      setError("User ID missing. Please log in again.");
+      toast.error("User ID missing. Please log in again");
       setCreating(false);
       router.push("/login");
       return;
@@ -178,7 +170,7 @@ export default function LeadsPage() {
       !form.whatsUpNumber ||
       !form.workEmail
     ) {
-      setError("Please fill all required fields.");
+      toast.error("Please fill all required fields");
       setCreating(false);
       return;
     }
@@ -222,24 +214,115 @@ export default function LeadsPage() {
         userId: "",
         priority: "HIGH",
       });
+
+      toast.success("Lead created successfully!");
     } catch (err: any) {
       console.error("Create lead error", err);
       if (err.response) {
-        setError(
+        toast.error(
           err.response.data.message ||
-            JSON.stringify(err.response.data) ||
-            "Lead creation failed"
+          JSON.stringify(err.response.data) ||
+          "Lead creation failed"
         );
         if (err.response.status === 401) {
           router.push("/login");
         }
       } else {
-        setError("No response from server. Check network or backend.");
+        toast.error("No response from server. Check network or backend");
       }
     } finally {
       setCreating(false);
     }
   };
+ const handleUpdateLead = async (updatedLead: Lead) => {
+  try {
+    const token = localStorage.getItem("token") || "";
+    let userId = "";
+
+    if (token) {
+      const decoded = parseJwt(token);
+      userId = decoded?.userId || decoded?._id || "";
+    }
+
+    if (!userId) {
+      toast.error("User ID missing. Please log in again");
+      router.push("/login");
+      return;
+    }
+
+    if (!updatedLead._id) {
+      toast.error("Lead ID is missing");
+      return;
+    }
+
+    // Required field check
+    if (
+      !updatedLead.email ||
+      !updatedLead.firstName ||
+      !updatedLead.websiteURL ||
+      !updatedLead.linkdinURL ||
+      !updatedLead.industry ||
+      !updatedLead.whatsUpNumber ||
+      !updatedLead.workEmail
+    ) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
+    // First name validation — allow spaces, hyphens, apostrophes
+    if (!/^[A-Za-z\s'-]+$/.test(updatedLead.firstName.trim())) {
+      toast.error("First name must contain only letters, spaces, hyphens, or apostrophes");
+      return;
+    }
+
+    // Prepare payload
+    const payload = {
+      email: updatedLead.email.trim(),
+      firstName: updatedLead.firstName.trim(),
+      websiteURL: updatedLead.websiteURL.trim(),
+      linkdinURL: updatedLead.linkdinURL.trim(),
+      industry: updatedLead.industry.trim(),
+      whatsUpNumber: Number(updatedLead.whatsUpNumber),
+      status: updatedLead.status,
+      workEmail: updatedLead.workEmail.trim(),
+      userId,
+      priority: updatedLead.priority,
+    };
+
+    const res = await fetch(
+      `http://localhost:8081/api/v1/lead/${updatedLead._id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    if (!res.ok) throw new Error(await res.text());
+
+    const data = await res.json();
+
+    // Update local state instantly
+    setLeads((prevLeads) =>
+      prevLeads.map((l) => (l._id === data.data._id ? data.data : l))
+    );
+
+    toast.success("Lead updated successfully!", {
+      duration: 3000,
+      position: "top-center",
+      dismissible: true,
+    });
+
+    setIsEditOpen(false);
+  } catch (err) {
+    console.error("Update failed:", err);
+    toast.error("Something went wrong");
+  }
+};
+
 
   const startIndex = (currentPage - 1) * leadsPerPage + 1;
   const endIndex = Math.min(currentPage * leadsPerPage, totalLeads);
@@ -299,13 +382,12 @@ export default function LeadsPage() {
         )}
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
+            <TableRow >
+              <TableHead>Full Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>WhatsApp</TableHead>
+              <TableHead>WhatsUpNumber</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Priority</TableHead>
-              <TableHead>Created At</TableHead>
+              <TableHead className="w-[50px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -323,9 +405,66 @@ export default function LeadsPage() {
                     {lead.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{lead.priority}</TableCell>
                 <TableCell>
-                  {new Date(lead.createdDate).toLocaleDateString()}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost"><MoreHorizontal /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditLead(lead)
+                          setIsEditOpen(true)
+                        }}
+                      >
+                        <Edit className="mr-2 h-4 w-4" /> Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={async () => {
+                          const alert = window.confirm("Are you sure you want to delete this lead?");
+                          if (!alert) return;
+                          try {
+                            const token = localStorage.getItem("token") || ""
+                            const res = await fetch(`http://localhost:8081/api/v1/lead/${lead._id}`, {
+                              method: "DELETE",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: token,
+                              },
+                            })
+                            if (!res.ok) {
+                              const errText = await res.text()
+                              throw new Error(errText)
+                            }
+                            setLeads(leads.filter(x => x._id !== lead._id))
+                            toast.success("Your lead is Deleted  "), {
+                              duration: 3000,
+                              position: "top-center",
+                              dismissible: true,
+                            }
+                            const newLeads = leads.filter(x => x._id !== lead._id);
+                            setLeads(newLeads);
+                            const remainingLeads = newLeads.length;
+                            const lastPage = Math.ceil(remainingLeads / 3);
+
+                            if (currentPage > lastPage) {
+                              setCurrentPage(lastPage || 1);
+                            } else {
+                              setCurrentPage(currentPage);
+                            }
+                            fetchLeads();
+
+                          } catch (err) {
+                            console.error("Delete failed:", err)
+                            toast.error("Something went wrong ")
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -502,6 +641,13 @@ export default function LeadsPage() {
           </div>
         </div>
       )}
+      <EditLeadDrawer
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        leadData={editLead}
+        onSave={handleUpdateLead}
+      />
     </div>
   );
 }
+
