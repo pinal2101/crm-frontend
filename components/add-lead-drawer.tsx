@@ -10,14 +10,20 @@ import {
   Divider,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import axios from 'axios';
+import { toast } from 'react-hot-toast';
+import ApiService from "../app/utils/api"
 
 const drawerWidth = 400;
 
-export default function AddLeadDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function AddLeadDrawer({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
   const [formData, setFormData] = useState({
     firstName: '',
-    lastName: '',
     email: '',
     websiteURL: '',
     linkdinURL: '',
@@ -27,20 +33,54 @@ export default function AddLeadDrawer({ open, onClose }: { open: boolean; onClos
     userId: '',
     priority: '',
   });
-  // const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+
+  const [loading, setLoading] = useState(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // Simple email validation
+  const isValidEmail = (email: string) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Basic validation
+    if (!formData.firstName || !formData.email) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+    if (!isValidEmail(formData.email)) {
+      toast.error('Invalid Email Address');
+      return;
+    }
+
     try {
-      const res = await axios.post('/api/leads', formData);
-      console.log('Lead created:', res.data);
-      onClose(); // close the drawer after submission
+      setLoading(true);
+      const res = await ApiService.create('/api/v1/lead', formData);
+
+      if (res) {
+        toast.success('Lead added successfully');
+        setFormData({
+          firstName: '',
+          email: '',
+          websiteURL: '',
+          linkdinURL: '',
+          whatsUpNumber: '',
+          status: '',
+          workEmail: '',
+          userId: '',
+          priority: '',
+        });
+        onClose();
+      }
     } catch (error) {
+      toast.error('Failed to add lead');
       console.error('Error adding lead:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -73,18 +113,14 @@ export default function AddLeadDrawer({ open, onClose }: { open: boolean; onClos
           </IconButton>
         </Box>
 
-        {/* Form Content */}
+        {/* Form */}
         <Box
           component="form"
           onSubmit={handleSubmit}
-          sx={{
-            p: 3,
-            flex: 1,
-            overflowY: 'auto',
-          }}
+          sx={{ p: 3, flex: 1, overflowY: 'auto' }}
         >
           <TextField
-            label="First Name"
+            label="First Name *"
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
@@ -92,15 +128,7 @@ export default function AddLeadDrawer({ open, onClose }: { open: boolean; onClos
             margin="normal"
           />
           <TextField
-            label="Last Name"
-            name="lastName"
-            value={formData.lastName}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="Email"
+            label="Email *"
             name="email"
             value={formData.email}
             onChange={handleChange}
@@ -165,20 +193,17 @@ export default function AddLeadDrawer({ open, onClose }: { open: boolean; onClos
             onChange={handleChange}
             fullWidth
             margin="normal"
-            InputProps={{
-              readOnly: true,
-            }}
+            InputProps={{ readOnly: true }}
           />
-
 
           <Button
             type="submit"
             variant="contained"
-            color="primary"
             fullWidth
+            disabled={loading}
             sx={{ mt: 3 }}
           >
-            Add Lead
+            {loading ? 'Adding...' : 'Add Lead'}
           </Button>
         </Box>
       </Box>
