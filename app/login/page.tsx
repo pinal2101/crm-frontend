@@ -55,6 +55,7 @@ export default function LoginPage() {
         throw new Error(data.message || "Login Failed")
       }
       localStorage.setItem("token", data.token)
+      localStorage.setItem("user",JSON.stringify(data.user))
       toast.success("Login successful ✅"), {
         duration: 3000,
         position: "top-center",
