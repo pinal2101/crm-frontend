@@ -55,7 +55,6 @@ export default function LoginPage() {
         throw new Error(data.message || "Login Failed")
       }
       localStorage.setItem("token", data.token)
-      localStorage.setItem("user",JSON.stringify(data.user))
       toast.success("Login successful ✅"), {
         duration: 3000,
         position: "top-center",
@@ -63,7 +62,7 @@ export default function LoginPage() {
       }
       router.push("/dashboard/leads")
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong ❌")
+      toast.error(err.message || "Something went wrong ")
     } finally {
       setIsLoading(false)
     }

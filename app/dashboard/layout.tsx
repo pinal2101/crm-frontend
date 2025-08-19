@@ -30,12 +30,12 @@ export default function DashboardLayout({
     })
     const data =await res.json()
     if(res.ok){
-      toast.success("Logout Successful ✅")
+      toast.success("Logout Successful ")
     }else{
       toast.error(`logout Failed:${data.message}`)
     }
    }catch(error){
-    toast.error("Something went wrong during logout ❌:")
+    toast.error("Something went wrong during logout :")
    }
    localStorage.removeItem("token")
    
