@@ -19,10 +19,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
 import AddLeadDrawer from "@/components/add-lead-drawer";
+import EditLeadDrawer from "@/components/EditLeadDrawer";
 import { getAll, deleteOne } from "@/app/utils/api";
-import toast, { Toaster } from "react-hot-toast";
-import Pagination from "@/components/Pagination";
+import toast from "react-hot-toast";
 import {
   Plus,
   Search,
@@ -32,99 +46,65 @@ import {
   Trash2,
   Eye,
 } from "lucide-react";
-interface Lead {
-  _id: string;
-  firstName: string;
-  websiteURL: string;
-  linkdinURL: string;
-  workEmail: string;
-  industry: string;
-  whatsUpNumber: string;
-  status: string;
-  priority: string;
-}
 
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [openDrawer, setOpenDrawer] = useState(false);
-  const [editLead, setEditLead] = useState<Lead | null>(null);
-  const [viewLead, setViewLead] = useState<Lead | null>(null);
+  const [openEditDrawer, setOpenEditDrawer] = useState(false);
+  const [editLead, setEditLead] = useState<any | null>(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const pageLimit = 10;
-
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<any | null>(null);
   const currentUserId = "64f8b5c2d1234abcd567ef90";
 
-  // Fetch leads from backend with pagination
-  const fetchLeads = async (
-    page = 1,
-    search: string = "",
-    status: string = "all"
-  ) => {
+  // Fetch leads
+  const fetchLeads = async () => {
     try {
       setLoading(true);
-
-      const statusQuery = status !== "all" ? `&status=${status.toUpperCase()}` : "";
-      const response = await getAll(
-        `lead?page=${page}&limit=${pageLimit}&search=${encodeURIComponent(search)}${statusQuery}`
-      );
-
+      const response = await getAll("lead");
       const leadsArray = Array.isArray(response)
         ? response
         : Array.isArray(response.data)
           ? response.data
           : [];
-
       setLeads(leadsArray);
-
-      const totalCount = response.total ?? 50;
-      setTotalPages(Math.ceil(totalCount / pageLimit));
-      setCurrentPage(page);
     } catch (error) {
       toast.error("Failed to fetch leads");
     } finally {
       setLoading(false);
     }
   };
-
-
   const handleDelete = async (id: string) => {
     try {
       await deleteOne("lead", id);
       toast.success("Lead deleted successfully");
-      fetchLeads(currentPage);
+      fetchLeads();
     } catch (error) {
       toast.error("Failed to delete lead");
     }
   };
+  const handleDeleteConfirm = async () => {
+    if (!leadToDelete) return;
+    await handleDelete(leadToDelete._id);
+    setConfirmDelete(false);
+    setLeadToDelete(null);
+  };
 
-  const handleEdit = (lead: Lead) => {
+
+  const handleEdit = (lead: any) => {
     setEditLead(lead);
-    setOpenDrawer(true);
+    setOpenEditDrawer(true);
     setOpenDropdownId(null);
   };
 
   useEffect(() => {
     fetchLeads();
   }, []);
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!openDropdownId) return;
-      const ref = dropdownRefs.current[openDropdownId];
-      if (ref && !ref.contains(event.target as Node)) {
-        setOpenDropdownId(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [openDropdownId]);
 
   const filteredLeads = Array.isArray(leads)
     ? leads.filter((lead) => {
@@ -161,10 +141,7 @@ export default function LeadsPage() {
           <Input
             placeholder="Search leads..."
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              fetchLeads(1, e.target.value, statusFilter);
-            }}
+            onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
@@ -181,7 +158,7 @@ export default function LeadsPage() {
         </Select>
       </div>
 
-      {/* Table + Pagination Wrapper */}
+      {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
         <div className="overflow-x-auto">
           <Table>
@@ -211,93 +188,115 @@ export default function LeadsPage() {
                 filteredLeads.map((lead) => (
                   <TableRow key={lead._id}>
                     <TableCell>{lead.firstName}</TableCell>
-                    <TableCell>{lead.workEmail}</TableCell>
+                    <TableCell>{lead.Email}</TableCell>
                     <TableCell>{lead.whatsUpNumber}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={lead.status === "ACTIVE" ? "secondary" : "destructive"}
+                        variant={
+                          lead.status === "ACTIVE" ? "secondary" : "destructive"
+                        }
                       >
                         {lead.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div
-                        className="relative inline-block text-left"
-                        ref={(el) => {
-                          dropdownRefs.current[lead._id] = el
-                        }}
-
-                      >
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex items-center"
-                          onClick={() =>
-                            setOpenDropdownId(
-                              openDropdownId === lead._id ? null : lead._id
-                            )
-                          }
-                        >
-                          <MoreHorizontal />
-                        </Button>
-
-                        {openDropdownId === lead._id && (
-                          <div
-                            className="absolute right-0 mt-2 w-40 bg-white border border-gray-200 shadow-md rounded-md z-50
-                                       transition-all duration-150 ease-out overflow-hidden"
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost">
+                            <MoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          {/* View Option */}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              alert(
+                                `Website: ${lead.websiteURL || "N/A"}\nLinkedIn: ${lead.linkdinURL || "N/A"
+                                }\nIndustry: ${lead.industry || "N/A"}\nPriority: ${lead.priority || "N/A"
+                                }`
+                              );
+                            }}
                           >
-                            <button
-                              className="w-full flex items-center gap-2 text-left px-3 py-2 hover:bg-gray-100"
-                              onClick={() => handleEdit(lead)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                              Edit
-                            </button>
-                            <button
-                              className="w-full flex items-center gap-2 text-left px-3 py-2 text-red-600 hover:bg-red-50"
-                              onClick={() => handleDelete(lead._id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </button>
-                            <button
-                              className="w-full flex items-center gap-2 text-left px-3 py-2 hover:bg-gray-100"
-                              onClick={() => {
-                                alert(
-                                  `Website: ${lead.websiteURL}\nLinkedIn: ${lead.linkdinURL}\nIndustry: ${lead.industry}\nPriority: ${lead.priority}`
-                                );
-                                setOpenDropdownId(null);
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                              View
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                            <Eye className="mr-2 h-4 w-4" /> View
+                          </DropdownMenuItem>
+
+                          {/* Edit Option */}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditLead(lead);
+                              setOpenEditDrawer(true);
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+
+                          {/*  Delete Option (confirmation) */}
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => {
+                              setLeadToDelete(lead);
+                              setConfirmDelete(true);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
+
                   </TableRow>
                 ))
               )}
             </TableBody>
           </Table>
         </div>
-
-        {/* Pagination */}
-      
       </div>
 
-      {/* Add/Edit Lead Drawer */}
+      {/* Drawers */}
       <AddLeadDrawer
         open={openDrawer}
         onOpenChange={setOpenDrawer}
         currentUserId={currentUserId}
         onSaved={() => {
-          fetchLeads(currentPage);
+          fetchLeads();
           toast.success("Lead created successfully");
         }}
       />
-
+      <EditLeadDrawer
+        open={openEditDrawer}
+        onOpenChange={setOpenEditDrawer}
+        currentUserId={currentUserId}
+        leadData={editLead}
+        onSaved={() => {
+          fetchLeads();
+          toast.success("Lead updated successfully");
+        }}
+      />
+      {/* 🔴 Delete Confirmation Dialog */}
+      {confirmDelete && leadToDelete && (
+        <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Delete Lead</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>
+                Are you sure you want to delete{" "}
+                <strong>{leadToDelete.firstName}</strong>?
+              </p>
+            </div>
+            <DialogFooter className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setConfirmDelete(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteConfirm}>
+                Yes, Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
+
   );
 }

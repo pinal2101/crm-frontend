@@ -19,9 +19,44 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { createOne } from "@/app/utils/api";
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function PhoneNumberField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [error, setError] = useState("");
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
 
+    // Only numbers allowed
+    if (!/^\d*$/.test(newValue)) return;
 
+    onChange(newValue);
+
+    if (newValue.length > 0 && newValue.length < 10) {
+      setError("WhatsApp number must be at least 10 digits");
+    } else {
+      setError("");
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <Input
+        type="text"
+        placeholder="Enter WhatsApp Number"
+        value={value}
+        onChange={handleChange}
+        maxLength={10}
+      />
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+    </div>
+  );
+}
 interface AddLeadDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -56,7 +91,7 @@ export default function AddLeadDrawer({
 
   useEffect(() => {
     if (open) {
-      
+
       setFormData({
         email: "",
         firstName: "",
@@ -75,13 +110,27 @@ export default function AddLeadDrawer({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.email) newErrors.email = "Email is required";
+    if (!formData.email) {
+      newErrors.email = "Email is required";
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Email is invalid";
+    }
+
+    if (!formData.workEmail) {
+      newErrors.workEmail = "Work Email is required";
+    } else if (!emailRegex.test(formData.workEmail)) {
+      newErrors.workEmail = "Work Email is invalid";
+    }
     if (!formData.firstName) newErrors.firstName = "First Name is required";
     if (!formData.websiteURL) newErrors.websiteURL = "Website URL is required";
     if (!formData.linkdinURL) newErrors.linkdinURL = "LinkedIn URL is required";
     if (!formData.industry) newErrors.industry = "Industry is required";
-    if (!formData.whatsUpNumber) newErrors.whatsUpNumber = "WhatsApp number is required";
-    if (!formData.workEmail) newErrors.workEmail = "Work Email is required";
+    if (!formData.whatsUpNumber) {
+      newErrors.whatsUpNumber = "WhatsApp number is required";
+    } else if (formData.whatsUpNumber.length < 10) {
+      newErrors.whatsUpNumber = "WhatsApp number must be at least 10 digits";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -97,7 +146,7 @@ export default function AddLeadDrawer({
 
     try {
       await createOne(LEADS_ENDPOINT, formData);
-      onSaved?.(); 
+      onSaved?.();
       onOpenChange(false);
     } catch (err: any) {
       console.error("Lead save failed:", err?.message || err);
@@ -136,21 +185,56 @@ export default function AddLeadDrawer({
             <Input
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData((s) => ({ ...s, email: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData((s) => ({ ...s, email: value }));
+
+                if (value === "") {
+                  setErrors((prev) => ({ ...prev, email: "Email is required" }));
+                } else if (!emailRegex.test(value)) {
+                  setErrors((prev) => ({ ...prev, email: "Email is invalid" }));
+                } else {
+                  setErrors((prev) => ({ ...prev, email: "" }));
+                }
+              }}
               placeholder="Enter personal email"
+              className={errors.email ? "border-red-500" : ""}
             />
-            {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+            {errors.email && (
+              <p className="text-sm text-red-500">{errors.email}</p>
+            )}
           </div>
 
+          {/*  Work Email */}
           <div>
             <Label>Work Email</Label>
             <Input
               type="email"
               value={formData.workEmail}
-              onChange={(e) => setFormData((s) => ({ ...s, workEmail: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData((s) => ({ ...s, workEmail: value }));
+
+                if (value === "") {
+                  setErrors((prev) => ({
+                    ...prev,
+                    workEmail: "Work Email is required",
+                  }));
+                } else if (!emailRegex.test(value)) {
+                  setErrors((prev) => ({
+                    ...prev,
+                    workEmail: "Work Email is invalid",
+                  }));
+                } else {
+                  setErrors((prev) => ({ ...prev, workEmail: "" }));
+                }
+              }}
               placeholder="Enter work email"
+              className={errors.workEmail ? "border-red-500" : ""}
             />
-            {errors.workEmail && <p className="text-sm text-red-500">{errors.workEmail}</p>}
+            {errors.workEmail && (
+              <p className="text-sm text-red-500">{errors.workEmail}</p>
+            )}
           </div>
 
           <div>
@@ -185,13 +269,13 @@ export default function AddLeadDrawer({
 
           <div>
             <Label>WhatsApp Number</Label>
-            <Input
+            <PhoneNumberField
               value={formData.whatsUpNumber}
-              onChange={(e) => setFormData((s) => ({ ...s, whatsUpNumber: e.target.value }))}
-              placeholder="Enter WhatsApp number"
+              onChange={(val) => setFormData((s) => ({ ...s, whatsUpNumber: val }))}
             />
             {errors.whatsUpNumber && <p className="text-sm text-red-500">{errors.whatsUpNumber}</p>}
           </div>
+
 
           <div>
             <Label>Status</Label>
