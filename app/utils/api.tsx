@@ -60,7 +60,7 @@ export const createOne = async (endpoint: string, data: any) => {
 //  UPDATE (renamed to updateOne so it matches leads/page.tsx)
 export const updateOne = async (endpoint: string, id: string, data: any) => {
   try {
-    const response = await api.put(endpoint);
+    const response = await api.put(`/${endpoint}/${id},data`);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;
@@ -70,7 +70,7 @@ export const updateOne = async (endpoint: string, id: string, data: any) => {
 //  DELETE
 export const deleteOne = async (endpoint: string, id: string) => {
   try {
-    const response = await api.delete(endpoint);
+    const response = await api.delete(`/${endpoint}/${id}`);
     return response.data;
   } catch (error: any) {
     throw error.response?.data || error.message;

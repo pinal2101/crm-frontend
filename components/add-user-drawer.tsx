@@ -8,19 +8,19 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { createOne, updateOne } from "@/app/utils/api";
-
+import { log } from "console"
 
 
 
 interface AddUserDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (user?: any) => void
+  onSaved?: (user?: any) => void;
 }
 
 const AUTH_ENDPOINT = "auth";
  
-export function AddUserDrawer({ open, onOpenChange, onSubmit, }: AddUserDrawerProps) {
+export function AddUserDrawer({ open, onOpenChange,onSaved }: AddUserDrawerProps) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -66,7 +66,7 @@ export function AddUserDrawer({ open, onOpenChange, onSubmit, }: AddUserDrawerPr
         await createOne("auth/register", formData);
          toast.success("User created successfully ")
       }
-      onSubmit?.(formData);
+      onSaved?.(formData) ;
       onOpenChange(false);
     }
 catch (error: any) {
