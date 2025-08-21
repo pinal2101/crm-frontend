@@ -1,212 +1,243 @@
-'use client';
-import React, { useState } from 'react';
-import {
-  Drawer,
-  Box,
-  TextField,
-  Button,
-  Typography,
-  IconButton,
-  Divider,
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import { toast } from 'react-hot-toast';
-import ApiService from "../app/utils/api"
+"use client";
 
-const drawerWidth = 400;
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { createOne } from "@/app/utils/api";
+
+
+
+interface AddLeadDrawerProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSaved?: () => void;
+  currentUserId: string;
+}
+
+const LEADS_ENDPOINT = "lead";
 
 export default function AddLeadDrawer({
   open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
+  onOpenChange,
+  onSaved,
+  currentUserId,
+}: AddLeadDrawerProps) {
+
   const [formData, setFormData] = useState({
-    firstName: '',
-    email: '',
-    websiteURL: '',
-    linkdinURL: '',
-    whatsUpNumber: '',
-    status: '',
-    workEmail: '',
-    userId: '',
-    priority: '',
+    email: "",
+    firstName: "",
+    websiteURL: "",
+    linkdinURL: "",
+    industry: "",
+    whatsUpNumber: "",
+    workEmail: "",
+    status: "ACTIVE",
+    priority: "HIGH",
+    userId: currentUserId,
   });
 
-  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  useEffect(() => {
+    if (open) {
+      
+      setFormData({
+        email: "",
+        firstName: "",
+        websiteURL: "",
+        linkdinURL: "",
+        industry: "",
+        whatsUpNumber: "",
+        workEmail: "",
+        status: "ACTIVE",
+        priority: "HIGH",
+        userId: currentUserId,
+      });
+      setErrors({});
+    }
+  }, [open, currentUserId]);
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.email) newErrors.email = "Email is required";
+    if (!formData.firstName) newErrors.firstName = "First Name is required";
+    if (!formData.websiteURL) newErrors.websiteURL = "Website URL is required";
+    if (!formData.linkdinURL) newErrors.linkdinURL = "LinkedIn URL is required";
+    if (!formData.industry) newErrors.industry = "Industry is required";
+    if (!formData.whatsUpNumber) newErrors.whatsUpNumber = "WhatsApp number is required";
+    if (!formData.workEmail) newErrors.workEmail = "Work Email is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // Simple email validation
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const handleCancel = () => {
+    onOpenChange(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Basic validation
-    if (!formData.firstName || !formData.email) {
-      toast.error('Please fill all required fields');
-      return;
-    }
-    if (!isValidEmail(formData.email)) {
-      toast.error('Invalid Email Address');
-      return;
-    }
+    if (!validateForm()) return;
+    setIsSubmitting(true);
 
     try {
-      setLoading(true);
-      const res = await ApiService.create('/api/v1/lead', formData);
-
-      if (res) {
-        toast.success('Lead added successfully');
-        setFormData({
-          firstName: '',
-          email: '',
-          websiteURL: '',
-          linkdinURL: '',
-          whatsUpNumber: '',
-          status: '',
-          workEmail: '',
-          userId: '',
-          priority: '',
-        });
-        onClose();
-      }
-    } catch (error) {
-      toast.error('Failed to add lead');
-      console.error('Error adding lead:', error);
+      await createOne(LEADS_ENDPOINT, formData);
+      onSaved?.(); 
+      onOpenChange(false);
+    } catch (err: any) {
+      console.error("Lead save failed:", err?.message || err);
+      setErrors((prev) => ({
+        ...prev,
+        form: err?.message || "Something went wrong",
+      }));
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Drawer anchor="right" open={open} onClose={onClose}>
-      <Box
-        sx={{
-          width: drawerWidth,
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Header */}
-        <Box
-          sx={{
-            px: 3,
-            py: 2,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            borderBottom: '1px solid #e0e0e0',
-          }}
-        >
-          <Typography variant="h6" noWrap>
-            Add New Lead
-          </Typography>
-          <IconButton onClick={onClose}>
-            <CloseIcon />
-          </IconButton>
-        </Box>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Add New Lead</SheetTitle>
+          <SheetDescription>
+            Fill in the information below to add a new lead to the system.
+          </SheetDescription>
+        </SheetHeader>
 
-        {/* Form */}
-        <Box
-          component="form"
-          onSubmit={handleSubmit}
-          sx={{ p: 3, flex: 1, overflowY: 'auto' }}
-        >
-          <TextField
-            label="First Name *"
-            name="firstName"
-            value={formData.firstName}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="Email *"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            type="email"
-          />
-          <TextField
-            label="Work Email"
-            name="workEmail"
-            value={formData.workEmail}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            type="email"
-          />
-          <TextField
-            label="Website URL"
-            name="websiteURL"
-            value={formData.websiteURL}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="LinkedIn URL"
-            name="linkdinURL"
-            value={formData.linkdinURL}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="WhatsApp Number"
-            name="whatsUpNumber"
-            value={formData.whatsUpNumber}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            type="tel"
-          />
-          <TextField
-            label="Status"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="Priority"
-            name="priority"
-            value={formData.priority}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="User ID"
-            name="userId"
-            value={formData.userId}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-            InputProps={{ readOnly: true }}
-          />
+        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+          <div>
+            <Label>First Name</Label>
+            <Input
+              value={formData.firstName}
+              onChange={(e) => setFormData((s) => ({ ...s, firstName: e.target.value }))}
+              placeholder="Enter first name"
+            />
+            {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
+          </div>
 
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={loading}
-            sx={{ mt: 3 }}
-          >
-            {loading ? 'Adding...' : 'Add Lead'}
-          </Button>
-        </Box>
-      </Box>
-    </Drawer>
+          <div>
+            <Label>Email</Label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData((s) => ({ ...s, email: e.target.value }))}
+              placeholder="Enter personal email"
+            />
+            {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
+          </div>
+
+          <div>
+            <Label>Work Email</Label>
+            <Input
+              type="email"
+              value={formData.workEmail}
+              onChange={(e) => setFormData((s) => ({ ...s, workEmail: e.target.value }))}
+              placeholder="Enter work email"
+            />
+            {errors.workEmail && <p className="text-sm text-red-500">{errors.workEmail}</p>}
+          </div>
+
+          <div>
+            <Label>Website URL</Label>
+            <Input
+              value={formData.websiteURL}
+              onChange={(e) => setFormData((s) => ({ ...s, websiteURL: e.target.value }))}
+              placeholder="https://example.com"
+            />
+            {errors.websiteURL && <p className="text-sm text-red-500">{errors.websiteURL}</p>}
+          </div>
+
+          <div>
+            <Label>LinkedIn URL</Label>
+            <Input
+              value={formData.linkdinURL}
+              onChange={(e) => setFormData((s) => ({ ...s, linkdinURL: e.target.value }))}
+              placeholder="https://linkedin.com/in/..."
+            />
+            {errors.linkdinURL && <p className="text-sm text-red-500">{errors.linkdinURL}</p>}
+          </div>
+
+          <div>
+            <Label>Industry</Label>
+            <Input
+              value={formData.industry}
+              onChange={(e) => setFormData((s) => ({ ...s, industry: e.target.value }))}
+              placeholder="Enter industry"
+            />
+            {errors.industry && <p className="text-sm text-red-500">{errors.industry}</p>}
+          </div>
+
+          <div>
+            <Label>WhatsApp Number</Label>
+            <Input
+              value={formData.whatsUpNumber}
+              onChange={(e) => setFormData((s) => ({ ...s, whatsUpNumber: e.target.value }))}
+              placeholder="Enter WhatsApp number"
+            />
+            {errors.whatsUpNumber && <p className="text-sm text-red-500">{errors.whatsUpNumber}</p>}
+          </div>
+
+          <div>
+            <Label>Status</Label>
+            <Select
+              value={formData.status}
+              onValueChange={(value: any) => setFormData((s) => ({ ...s, status: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label>Priority</Label>
+            <Select
+              value={formData.priority}
+              onValueChange={(value: any) => setFormData((s) => ({ ...s, priority: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="HIGH">High</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="LOW">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
+
+          <div className="flex justify-end space-x-3 pt-6">
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Adding..." : "Submit"}
+            </Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
   );
 }
