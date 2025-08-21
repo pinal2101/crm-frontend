@@ -284,13 +284,7 @@ export default function LeadsPage() {
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-center py-4 border-t border-gray-200">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={fetchLeads}
-          />
-        </div>
+      
       </div>
 
       {/* Add/Edit Lead Drawer */}

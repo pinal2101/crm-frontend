@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 interface PaginationProps {
   currentPage: number;
@@ -9,47 +8,88 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-const Pagination: React.FC<PaginationProps> = ({
+export default function Pagination({
   currentPage,
   totalPages,
   onPageChange,
-}) => {
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-
+}: PaginationProps) {
   if (totalPages <= 1) return null;
 
+  // Dynamic page numbers (with dots "…")
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        pages.push(1, 2, 3, 4, 5, "...", totalPages);
+      } else if (currentPage > totalPages - 4) {
+        pages.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(
+          1,
+          "...",
+          currentPage - 1,
+          currentPage,
+          currentPage + 1,
+          "...",
+          totalPages
+        );
+      }
+    }
+    return pages;
+  };
+
   return (
-    <div className="flex items-center justify-center space-x-2 mt-4">
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={currentPage === 1}
-        onClick={() => onPageChange(currentPage - 1)}
-      >
-        Prev
-      </Button>
-
-      {pages.map((page) => (
-        <Button
-          key={page}
-          size="sm"
-          variant={page === currentPage ? "default" : "outline"}
-          onClick={() => onPageChange(page)}
+    <div className="flex justify-center mt-6">
+      <div className="flex items-center gap-2 px-6 py-3 rounded-full shadow-lg bg-white">
+        {/* Prev */}
+        <button
+          className={cn(
+            "w-10 h-10 flex items-center justify-center rounded-full shadow-md text-red-400",
+            currentPage === 1 && "opacity-40 cursor-not-allowed"
+          )}
+          disabled={currentPage === 1}
+          onClick={() => onPageChange(currentPage - 1)}
         >
-          {page}
-        </Button>
-      ))}
+          &lt;
+        </button>
 
-      <Button
-        size="sm"
-        variant="outline"
-        disabled={currentPage === totalPages}
-        onClick={() => onPageChange(currentPage + 1)}
-      >
-        Next
-      </Button>
+        {/* Pages */}
+        {getPageNumbers().map((page, idx) =>
+          page === "..." ? (
+            <span key={idx} className="w-10 h-10 flex items-center justify-center text-gray-400">
+              ...
+            </span>
+          ) : (
+            <button
+              key={page}
+              onClick={() => onPageChange(Number(page))}
+              className={cn(
+                "w-10 h-10 flex items-center justify-center rounded-full shadow-md transition-all",
+                page === currentPage
+                  ? "bg-red-500 text-white"
+                  : "bg-white text-red-500 hover:bg-red-100"
+              )}
+            >
+              {page}
+            </button>
+          )
+        )}
+
+        {/* Next */}
+        <button
+          className={cn(
+            "w-10 h-10 flex items-center justify-center rounded-full shadow-md text-red-400",
+            currentPage === totalPages && "opacity-40 cursor-not-allowed"
+          )}
+          disabled={currentPage === totalPages}
+          onClick={() => onPageChange(currentPage + 1)}
+        >
+          &gt;
+        </button>
+      </div>
     </div>
   );
-};
-
-export default Pagination;
+}
