@@ -5,6 +5,7 @@ import './globals.css'
 import toast, { Toaster } from "react-hot-toast";
 
 
+
 export const metadata: Metadata = {
   title: 'v0 App',
   description: 'Created with v0',
@@ -29,8 +30,17 @@ html {
       </head>
       <body>
         {children}
-        <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
-
+        <Toaster position="top-center" 
+        toastOptions={{
+            duration: 3000, // default
+            success: {
+              duration: 3000,
+            },
+            error: {
+              duration: 3000,// error toasts stay 3 sec
+            },
+          }}
+        />
       </body>
     </html>
   )
