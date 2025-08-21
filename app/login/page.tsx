@@ -1,14 +1,14 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {  toast } from "sonner"
+import { login } from "../utils/api";
+import { toast } from "react-hot-toast"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
+  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
   const validateForm = () => {
     const newErrors: { email?: string; password?: string } = {}
 
@@ -28,8 +29,8 @@ export default function LoginPage() {
 
     if (!password) {
       newErrors.password = "Password is required"
-    } else if (password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+    } else if (!strongPasswordRegex.test(password)) {
+      newErrors.password = "Password must be at least 6 characters and include uppercase, lowercase, number and symbol"
     }
 
     setErrors(newErrors)
@@ -38,31 +39,37 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
     if (!validateForm()) return
 
     setIsLoading(true)
-    try {
-      const res = await fetch("http://localhost:8081/api/v1/auth/login", {
-        method: 'POST',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Login Failed")
+     try {
+      const data = await login({ email, password })
+
+      if (!data.success) {
+        throw{
+          response:{
+            status:data.status,
+            data:{message:data.message || "Login Failed"}
+          }
+        } 
       }
       localStorage.setItem("token", data.token)
-      toast.success("Login successful ✅"), {
-        duration: 3000,
-        position: "top-center",
-        dismissible: true,
+        if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user))
       }
+      
+      toast.success("Login successful ✅")
       router.push("/dashboard/leads")
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong ")
+      if(err?.response?.status === 404){
+      toast.error("404 Not Found")
+      } else if (err?.response?.status === 401) {
+        toast.error("Unauthorized (401)")
+      }else if(err?.message){
+        toast.error(err.message)
+      } else{
+      toast.error( "Invalid email or password")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -84,7 +91,18 @@ export default function LoginPage() {
                 type="email"
                 placeholder="admin@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setEmail(value)
+
+                  if(value === ""){
+                    setErrors((prev)=>({ ...prev,email:"Email is required"}))
+                  }else if(!/\S+@\S+\.\S+/.test(value)){
+                    setErrors((prev) => ({ ...prev, email: "Email is invalid" }))
+                  }else{
+                    setErrors((prev) => ({...prev,email:""}))
+                  }
+                }}
                 className={errors.email ? "border-red-500" : ""}
               />
               {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
@@ -96,7 +114,21 @@ export default function LoginPage() {
                 type="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>{
+                  const value =e.target.value
+                   setPassword(value)
+                   if (value === ""){
+                    setErrors((prev) => ({ ...prev, password: "Password is required" }))
+                   }else if (!strongPasswordRegex.test(value)) {
+                    setErrors((prev) => ({
+                      ...prev,
+                      password:
+                        "Password must be at least 6 characters and include uppercase, lowercase, number and symbol",
+                    }))
+                  }else{
+                      setErrors((prev) => ({ ...prev, password: "" }))
+                  }
+                }}
                 className={errors.password ? "border-red-500" : ""}
               />
               {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}

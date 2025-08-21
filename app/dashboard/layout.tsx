@@ -21,7 +21,7 @@ export default function DashboardLayout({
   const handleLogout = async() => {
    const token =localStorage.getItem("token")
    try{
-    const res =await fetch("http://localhost:8081/api/v1/auth/logout",{
+    const res =await fetch("http://localhost:8081/api/v1/auth/",{
       method:'POST',
       headers:{
         "Content-Type":"application/json",

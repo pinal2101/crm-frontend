@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from '@/components/ui/badge'
-import { toast } from "sonner"
+import { toast } from "react-hot-toast"
 import { useRouter } from "next/navigation";
+import {getAll} from "@/app/utils/api"
 import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2 } from 'lucide-react'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, } from '@/components/ui/dropdown-menu'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, } from "@/components/ui/dialog"
@@ -56,7 +57,7 @@ export default function UsersPage() {
       if (searchTerm) params.append("search", searchTerm);
       if (roleFilter !== "all") params.append("role", roleFilter);
       const res = await fetch(
-        `http://localhost:8081/api/v1/auth/listUsers?${params.toString()}`,
+        `http://localhost:8081/api/v1/auth?${params.toString()}`,
         {
           method: "GET",
           headers: {
@@ -105,7 +106,7 @@ export default function UsersPage() {
     try {
       const token = localStorage.getItem("token") || "";
       const res = await fetch(
-        `http://localhost:8081/api/v1/auth/updateProfile/${updatedUser._id}`,
+        `http://localhost:8081/api/v1/auth/${updatedUser._id}`,
         {
           method: "PUT",
           headers: {
@@ -291,7 +292,7 @@ export default function UsersPage() {
                 onClick={async () => {
                   try {
                     const token = localStorage.getItem("token") || ""
-                    const res = await fetch(`http://localhost:8081/api/v1/auth/delete/${userToDelete._id}`, {
+                    const res = await fetch(`http://localhost:8081/api/v1/auth/${userToDelete._id}`, {
                       method: "DELETE",
                       headers: {
                         "Content-Type": "application/json",
