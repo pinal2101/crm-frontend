@@ -58,7 +58,7 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(data.user))
       }
       
-      toast.success("Login successful ✅")
+      toast.success("Login successful ")
       router.push("/dashboard/leads")
     } catch (err: any) {
       if(err?.response?.status === 404){

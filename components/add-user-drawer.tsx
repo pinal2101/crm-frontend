@@ -61,7 +61,7 @@ export function AddUserDrawer({ open, onOpenChange,onSaved }: AddUserDrawerProps
      console.log("Submitted Form Data:", formData) 
       if ((formData as any)._id) {
         await updateOne(AUTH_ENDPOINT, (formData as any)._id, formData);
-        toast.success("User updated successfully ✅")
+        toast.success("User updated successfully ")
       } else {
         await createOne("auth/register", formData);
          toast.success("User created successfully ")
