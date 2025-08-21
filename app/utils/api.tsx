@@ -27,7 +27,7 @@ export const login = async (data: { email: string; password: string }) => {
     throw error.response?.data || error.message;
   }
 };
-// 🔹 GET All
+// GET All
 export const getAll = async (endpoint: string,params:Record<string,any>={}) => {
   try {
     const response = await api.get(endpoint,{ params });
@@ -37,7 +37,7 @@ export const getAll = async (endpoint: string,params:Record<string,any>={}) => {
   }
 };
 
-// 🔹 GET by ID
+//  GET by ID
 export const getById = async (endpoint: string, id: string) => {
   try {
     const response = await api.get(endpoint);
@@ -47,7 +47,7 @@ export const getById = async (endpoint: string, id: string) => {
   }
 };
 
-// 🔹 CREATE
+//  CREATE
 export const createOne = async (endpoint: string, data: any) => {
   try {
     const response = await api.post(`/${endpoint}`,data);
@@ -57,7 +57,7 @@ export const createOne = async (endpoint: string, data: any) => {
   }
 };
 
-// 🔹 UPDATE (renamed to updateOne so it matches leads/page.tsx)
+//  UPDATE (renamed to updateOne so it matches leads/page.tsx)
 export const updateOne = async (endpoint: string, id: string, data: any) => {
   try {
     const response = await api.put(endpoint);
@@ -67,7 +67,7 @@ export const updateOne = async (endpoint: string, id: string, data: any) => {
   }
 };
 
-// 🔹 DELETE
+//  DELETE
 export const deleteOne = async (endpoint: string, id: string) => {
   try {
     const response = await api.delete(endpoint);
