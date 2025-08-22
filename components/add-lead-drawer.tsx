@@ -19,6 +19,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { createOne } from "@/app/utils/api";
+import { Plus, Trash2 } from "lucide-react";
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function PhoneNumberField({
   value,
@@ -32,7 +33,6 @@ function PhoneNumberField({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
 
-    // Only numbers allowed
     if (!/^\d*$/.test(newValue)) return;
 
     onChange(newValue);
@@ -43,7 +43,6 @@ function PhoneNumberField({
       setError("");
     }
   };
-
   return (
     <div className="space-y-1">
       <Input
@@ -63,7 +62,6 @@ interface AddLeadDrawerProps {
   onSaved?: () => void;
   currentUserId: string;
 }
-
 const LEADS_ENDPOINT = "lead";
 
 export default function AddLeadDrawer({
@@ -72,7 +70,7 @@ export default function AddLeadDrawer({
   onSaved,
   currentUserId,
 }: AddLeadDrawerProps) {
-
+const [email, setEmail] = useState<string[]>([""]);
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -110,11 +108,6 @@ export default function AddLeadDrawer({
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
-    if (!formData.email) {
-      newErrors.email = "Email is required";
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Email is invalid";
-    }
 
     if (!formData.workEmail) {
       newErrors.workEmail = "Work Email is required";
@@ -131,6 +124,14 @@ export default function AddLeadDrawer({
       newErrors.whatsUpNumber = "WhatsApp number must be at least 10 digits";
     }
 
+    email.forEach((email, index) => {
+      if (!email) {
+        newErrors[`email_${index}`] = "Email is required";
+      } else if (!emailRegex.test(email)) {
+        newErrors[`email_${index}`] = "Email is invalid";
+      }
+    });
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -139,13 +140,46 @@ export default function AddLeadDrawer({
     onOpenChange(false);
   };
 
+  const handleEmailChange = (index: number, value: string) => {
+    const newEmail = [...email];
+    newEmail[index] = value;
+    setEmail(newEmail);
+
+    if (!value) {
+      setErrors((prev) => ({ ...prev, [`email_${index}`]: "Email is required" }));
+    } else if (!emailRegex.test(value)) {
+      setErrors((prev) => ({ ...prev, [`email_${index}`]: "Email is invalid" }));
+    } else {
+      setErrors((prev) => {
+        const newErr = { ...prev };
+        delete newErr[`email_${index}`];
+        return newErr;
+      });
+    }
+  };
+
+  const addEmailField = () => {
+    setEmail((prev) => [...prev, ""]);
+  };
+
+  const removeEmailField = (index: number) => {
+    const newEmail = email.filter((_, i) => i !== index);
+    setEmail(newEmail);
+    setErrors((prev) => {
+      const newErr = { ...prev };
+      delete newErr[`email_${index}`];
+      return newErr;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
     setIsSubmitting(true);
 
     try {
-      await createOne(LEADS_ENDPOINT, formData);
+        const payload = { ...formData, email }; 
+      await createOne(LEADS_ENDPOINT, payload);
       onSaved?.();
       onOpenChange(false);
     } catch (err: any) {
@@ -182,30 +216,46 @@ export default function AddLeadDrawer({
 
           <div>
             <Label>Email</Label>
-            <Input
-              type="email"
-              value={formData.email}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData((s) => ({ ...s, email: value }));
-
-                if (value === "") {
-                  setErrors((prev) => ({ ...prev, email: "Email is required" }));
-                } else if (!emailRegex.test(value)) {
-                  setErrors((prev) => ({ ...prev, email: "Email is invalid" }));
-                } else {
-                  setErrors((prev) => ({ ...prev, email: "" }));
-                }
-              }}
-              placeholder="Enter personal email"
-              className={errors.email ? "border-red-500" : ""}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email}</p>
-            )}
+            <div className="space-y-3">
+              {email.map((email, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <Input
+                    type="email"
+                    value={email}
+                    onChange={(e) => handleEmailChange(index, e.target.value)}
+                    placeholder={`Enter email ${index + 1}`}
+                    className={errors[`email_${index}`] ? "border-red-500" : ""}
+                  />
+                  {email.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeEmailField(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {Object.keys(errors)
+              .filter((key) => key.startsWith("email_"))
+              .map((key) => (
+                <p key={key} className="text-sm text-red-500">
+                  {errors[key]}
+                </p>
+              ))}
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2"
+              onClick={addEmailField}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Add Email
+            </Button>
           </div>
 
-          {/*  Work Email */}
           <div>
             <Label>Work Email</Label>
             <Input
@@ -275,8 +325,6 @@ export default function AddLeadDrawer({
             />
             {errors.whatsUpNumber && <p className="text-sm text-red-500">{errors.whatsUpNumber}</p>}
           </div>
-
-
           <div>
             <Label>Status</Label>
             <Select

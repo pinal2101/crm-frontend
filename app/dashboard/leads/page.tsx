@@ -32,7 +32,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-
+import Pagination from "@/components/Pagination";
 import AddLeadDrawer from "@/components/add-lead-drawer";
 import EditLeadDrawer from "@/components/EditLeadDrawer";
 import { getAll, deleteOne } from "@/app/utils/api";
@@ -49,7 +49,7 @@ import {
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [openDrawer, setOpenDrawer] = useState(false);
   const [openEditDrawer, setOpenEditDrawer] = useState(false);
   const [editLead, setEditLead] = useState<any | null>(null);
@@ -62,23 +62,51 @@ export default function LeadsPage() {
   const [leadToDelete, setLeadToDelete] = useState<any | null>(null);
   const currentUserId = "64f8b5c2d1234abcd567ef90";
 
-  // Fetch leads
+  const [currentPage, setCurrentPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const response = await getAll("lead");
-      const leadsArray = Array.isArray(response)
-        ? response
-        : Array.isArray(response.data)
-          ? response.data
-          : [];
+
+      const params: Record<string, any> = {
+        page: currentPage,
+        limit,
+      };
+      if (searchTerm?.trim()) params.search = searchTerm.trim();
+      if (statusFilter && statusFilter !== "all") params.status = statusFilter;
+
+      const response = await getAll("lead", params);
+
+      const leadsArray =
+        response?.leads && Array.isArray(response.leads)
+          ? response.leads
+          : response?.data && Array.isArray(response.data)
+            ? response.data
+            : Array.isArray(response)
+              ? response
+              : [];
+
+      const total =
+        typeof response?.totalPages === "number"
+          ? response.totalPages
+          : response?.meta?.totalPages
+            ? response.meta.totalPages
+            : 1;
+
       setLeads(leadsArray);
-    } catch (error) {
+      setTotalPages(total > 0 ? total : 1);
+    } catch (error: any) {
+      console.error("Fetch leads error:", error);
       toast.error("Failed to fetch leads");
+      setLeads([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
   };
+
   const handleDelete = async (id: string) => {
     try {
       await deleteOne("lead", id);
@@ -88,13 +116,13 @@ export default function LeadsPage() {
       toast.error("Failed to delete lead");
     }
   };
+
   const handleDeleteConfirm = async () => {
     if (!leadToDelete) return;
     await handleDelete(leadToDelete._id);
     setConfirmDelete(false);
     setLeadToDelete(null);
   };
-
 
   const handleEdit = (lead: any) => {
     setEditLead(lead);
@@ -104,23 +132,11 @@ export default function LeadsPage() {
 
   useEffect(() => {
     fetchLeads();
-  }, []);
-
-  const filteredLeads = Array.isArray(leads)
-    ? leads.filter((lead) => {
-      const matchesSearch =
-        lead.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.workEmail.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus =
-        statusFilter === "all" ||
-        lead.status?.toLowerCase() === statusFilter.toLowerCase();
-      return matchesSearch && matchesStatus;
-    })
-    : [];
+  }, [currentPage, searchTerm, statusFilter]);
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Leads</h1>
         <Button
@@ -136,16 +152,25 @@ export default function LeadsPage() {
 
       {/* Filters */}
       <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1 max-w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Search leads..."
+            placeholder="Search firstName, email "
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={(val) => {
+            setStatusFilter(val);
+            setCurrentPage(1);
+          }}
+        >
           <SelectTrigger className="w-48">
             <Filter className="mr-2 h-4 w-4" />
             <SelectValue placeholder="Filter by status" />
@@ -158,7 +183,6 @@ export default function LeadsPage() {
         </Select>
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
         <div className="overflow-x-auto">
           <Table>
@@ -178,23 +202,21 @@ export default function LeadsPage() {
                     Loading...
                   </TableCell>
                 </TableRow>
-              ) : filteredLeads.length === 0 ? (
+              ) : leads.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center">
                     No leads found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLeads.map((lead) => (
+                leads.map((lead) => (
                   <TableRow key={lead._id}>
                     <TableCell>{lead.firstName}</TableCell>
-                    <TableCell>{lead.Email}</TableCell>
+                    <TableCell>{lead.email?.length ? lead.email.join(", ") : "N/A"}</TableCell>
                     <TableCell>{lead.whatsUpNumber}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          lead.status === "ACTIVE" ? "secondary" : "destructive"
-                        }
+                        variant={lead.status === "ACTIVE" ? "secondary" : "destructive"}
                       >
                         {lead.status}
                       </Badge>
@@ -207,30 +229,21 @@ export default function LeadsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                          {/* View Option */}
+
                           <DropdownMenuItem
                             onClick={() => {
                               alert(
-                                `Website: ${lead.websiteURL || "N/A"}\nLinkedIn: ${lead.linkdinURL || "N/A"
-                                }\nIndustry: ${lead.industry || "N/A"}\nPriority: ${lead.priority || "N/A"
-                                }`
+                                `Work Email: ${lead.workEmail || "N/A"}\nWebsite: ${lead.websiteURL || "N/A"}\nLinkedIn: ${lead.linkdinURL || "N/A"}\nIndustry: ${lead.industry || "N/A"}\nPriority: ${lead.priority || "N/A"}`
                               );
                             }}
                           >
                             <Eye className="mr-2 h-4 w-4" /> View
                           </DropdownMenuItem>
 
-                          {/* Edit Option */}
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditLead(lead);
-                              setOpenEditDrawer(true);
-                            }}
-                          >
+                          <DropdownMenuItem onClick={() => handleEdit(lead)}>
                             <Pencil className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
 
-                          {/*  Delete Option (confirmation) */}
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => {
@@ -243,7 +256,6 @@ export default function LeadsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-
                   </TableRow>
                 ))
               )}
@@ -251,8 +263,14 @@ export default function LeadsPage() {
           </Table>
         </div>
       </div>
+      <div className="mt-6 mb-6 px-4 py-2 flex justify-center">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(page) => setCurrentPage(page)}
+        />
+      </div>
 
-      {/* Drawers */}
       <AddLeadDrawer
         open={openDrawer}
         onOpenChange={setOpenDrawer}
@@ -272,7 +290,7 @@ export default function LeadsPage() {
           toast.success("Lead updated successfully");
         }}
       />
-      {/* 🔴 Delete Confirmation Dialog */}
+      {/* Delete Confirmation  */}
       {confirmDelete && leadToDelete && (
         <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
           <DialogContent>
@@ -297,6 +315,5 @@ export default function LeadsPage() {
         </Dialog>
       )}
     </div>
-
   );
 }
