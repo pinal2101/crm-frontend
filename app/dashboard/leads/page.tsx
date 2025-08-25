@@ -106,7 +106,6 @@ export default function LeadsPage() {
       setLoading(false);
     }
   };
-
   const handleDelete = async (id: string) => {
     try {
       await deleteOne("lead", id);
@@ -116,7 +115,6 @@ export default function LeadsPage() {
       toast.error("Failed to delete lead");
     }
   };
-
   const handleDeleteConfirm = async () => {
     if (!leadToDelete) return;
     await handleDelete(leadToDelete._id);
@@ -216,7 +214,9 @@ export default function LeadsPage() {
                     <TableCell>{lead.whatsUpNumber}</TableCell>
                     <TableCell>
                       <Badge
-                        variant={lead.status === "ACTIVE" ? "secondary" : "destructive"}
+                        variant={
+                          lead.status === "ACTIVE" ? "secondary" : "destructive"
+                        }
                       >
                         {lead.status}
                       </Badge>
@@ -256,6 +256,7 @@ export default function LeadsPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
+
                   </TableRow>
                 ))
               )}
@@ -315,5 +316,6 @@ export default function LeadsPage() {
         </Dialog>
       )}
     </div>
+
   );
 }
