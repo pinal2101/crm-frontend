@@ -46,7 +46,6 @@ import {
   Trash2,
   Eye,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton"
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -195,11 +194,25 @@ export default function LeadsPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center">
-                    Loading...
-                  </TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <TableRow key={`lead-skeleton-${idx}`}>
+                    <TableCell>
+                      <div className="h-5 w-40  rounded-md shadow-md" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-5 w-64 animate-pulse rounded-md shadow-md" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-5 w-32 animate-pulse rounded-md shadow-md" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-6 w-20 animate-pulse rounded-full shadow-md" />
+                    </TableCell>
+                    <TableCell>
+                      <div className="h-8 w-8 animate-pulse rounded-md shadow-md" />
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : leads.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center">
@@ -210,7 +223,13 @@ export default function LeadsPage() {
                 leads.map((lead) => (
                   <TableRow key={lead._id}>
                     <TableCell>{lead.firstName}</TableCell>
-                    <TableCell>{lead.email?.length ? lead.email.join(", ") : "N/A"}</TableCell>
+                    <TableCell>{
+                      Array.isArray(lead.email)
+                        ? (lead.email.length ? lead.email.join(", ") : "N/A")
+                        : Array.isArray(lead.emails)
+                          ? (lead.emails.length ? lead.emails.join(", ") : "N/A")
+                          : (lead.email ? lead.email : "N/A")
+                    }</TableCell>
                     <TableCell>{lead.whatsUpNumber}</TableCell>
                     <TableCell>
                       <Badge
@@ -291,7 +310,7 @@ export default function LeadsPage() {
           toast.success("Lead updated successfully");
         }}
       />
-      {/* Delete Confirmation  */}
+      {/* Delete */}
       {confirmDelete && leadToDelete && (
         <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
           <DialogContent>
@@ -316,6 +335,5 @@ export default function LeadsPage() {
         </Dialog>
       )}
     </div>
-
   );
 }
