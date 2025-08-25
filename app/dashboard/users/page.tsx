@@ -103,7 +103,7 @@ export default function UsersPage() {
     }
   };
 
-  // Initial & dependency fetch
+ 
   useEffect(() => {
     fetchUsers();
   }, [searchTerm, roleFilter, currentPage]);
@@ -124,7 +124,6 @@ export default function UsersPage() {
     }
   };
 
-  if (!initialized && loading) return <p className="p-6">Loading...</p>;
 
   return (
     <div className="space-y-6 p-4">
@@ -134,8 +133,7 @@ export default function UsersPage() {
           <Plus className="mr-2 h-4 w-4" /> Add User
         </Button>
       </div>
-
-      {/* Search + Filter */}
+        {/* serch */}
       <div className="flex space-x-4">
         <div className="relative flex-1">
           <Search className="absolute top-2 left-3 text-gray-400 w-4 h-4" />
@@ -161,8 +159,6 @@ export default function UsersPage() {
           </SelectContent>
         </Select>
       </div>
-
-      {/* Users Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm flex flex-col">
         <div className="overflow-x-auto">
           <Table>
@@ -176,52 +172,80 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users
-                .filter((u) => u && u._id)
-                .map((u) => (
-                  <TableRow key={u._id}>
-                    <TableCell>{`${u.firstName} ${u.lastName}`}</TableCell>
-                    <TableCell>{u.email}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          roleColors[u.role || ""] || "bg-gray-100 text-gray-800"
-                        }
-                      >
-                        {u.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{u.phoneNumber}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost">
-                            <MoreHorizontal />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setDrawerUser(u);
-                              setIsDrawerOpen(true);
-                            }}
+              {loading
+                ? Array.from({ length: 5 }).map((_, idx) => (
+                    <TableRow key={`skeleton-${idx}`}>
+                      <TableCell>
+                        <div className="h-5 w-40  rounded-md shadow-md" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-5 w-64 animate-pulse rounded-md shadow-md" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-6 w-20 animate-pulse rounded-full shadow-md" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-5 w-28 animate-pulse rounded-md shadow-md" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="h-8 w-8 animate-pulse rounded-md shadow-md" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                  :users.length === 0
+                  ?(
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-gray-500">
+                        No Users Found.
+                      </TableCell>
+                    </TableRow>
+                  )
+                : users
+                    .filter((u: User) => u && u._id)
+                    .map((u: User) => (
+                      <TableRow key={u._id}>
+                        <TableCell>{`${u.firstName} ${u.lastName}`}</TableCell>
+                        <TableCell>{u.email}</TableCell>
+                        <TableCell>
+                          <Badge
+                            className={
+                              roleColors[u.role || ""] || "bg-gray-100 text-gray-800"
+                            }
                           >
-                            <Edit className="mr-2 h-4 w-4" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => {
-                              setUserToDelete(u);
-                              setConfirmDelete(true);
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            {u.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{u.phoneNumber}</TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost">
+                                <MoreHorizontal />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDrawerUser(u);
+                                  setIsDrawerOpen(true);
+                                }}
+                              >
+                                <Edit className="mr-2 h-4 w-4" /> Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => {
+                                  setUserToDelete(u);
+                                  setConfirmDelete(true);
+                                }}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
             </TableBody>
           </Table>
         </div>
@@ -233,8 +257,6 @@ export default function UsersPage() {
             onPageChange={(page) => setCurrentPage(page)}
           />
         </div>
-
-      {/* Add/Edit User Drawer */}
       <AddUserDrawer
         open={isDrawerOpen}
         onOpenChange={(open) => {
@@ -244,8 +266,7 @@ export default function UsersPage() {
         onSaved={fetchUsers}
         userData={drawerUser}
       />
-
-      {/* Delete Confirmation */}
+      {/* delete */}
       {confirmDelete && userToDelete && (
         <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
           <DialogContent>

@@ -46,7 +46,7 @@ import {
   Trash2,
   Eye,
 } from "lucide-react";
-
+import { Skeleton } from "@/components/ui/skeleton"
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

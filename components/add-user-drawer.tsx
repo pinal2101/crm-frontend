@@ -62,7 +62,7 @@ export function AddUserDrawer({ open, onOpenChange,onSaved, userData }: AddUserD
         setErrors({})
       }
     } else {
-      // reset when closed
+      // reset closed
       setFormData({
         _id: undefined,
         firstName: '',
