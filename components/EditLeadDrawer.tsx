@@ -72,8 +72,6 @@ export default function EditLeadDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-
-  //  preload form data when drawer opens
   useEffect(() => {
     if (open && leadData) {
       const emailList = Array.isArray(leadData.email) ? leadData.email : leadData.email ? [leadData.email] : [""];
@@ -132,7 +130,7 @@ export default function EditLeadDrawer({
     if (!formData.websiteURL) newErrors.websiteURL = "Website URL is required";
     if (!formData.linkdinURL) newErrors.linkdinURL = "LinkedIn URL is required";
     if (!formData.industry) newErrors.industry = "Industry is required";
-    if (!formData.whatsUpNumber) newErrors.whatsUpNumber = "WhatsApp number is required";
+    if (!formData.whatsUpNumber) newErrors.whatsUpNumber = "";
     else if (formData.whatsUpNumber.length < 10) newErrors.whatsUpNumber = "WhatsApp number must be at least 10 digits";
 
     email.forEach((e, i) => {

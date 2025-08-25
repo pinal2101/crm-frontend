@@ -52,11 +52,11 @@ export default function LeadsPage() {
   const [openDrawer, setOpenDrawer] = useState(false);
   const [openEditDrawer, setOpenEditDrawer] = useState(false);
   const [editLead, setEditLead] = useState<any | null>(null);
+  const [viewLead, setViewLead] = useState<any | null>(null);
+  const [openViewDialog, setOpenViewDialog] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const dropdownRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<any | null>(null);
   const currentUserId = "64f8b5c2d1234abcd567ef90";
@@ -124,7 +124,6 @@ export default function LeadsPage() {
   const handleEdit = (lead: any) => {
     setEditLead(lead);
     setOpenEditDrawer(true);
-    setOpenDropdownId(null);
   };
 
   useEffect(() => {
@@ -250,10 +249,9 @@ export default function LeadsPage() {
                         <DropdownMenuContent>
 
                           <DropdownMenuItem
-                            onClick={() => {
-                              alert(
-                                `Work Email: ${lead.workEmail || "N/A"}\nWebsite: ${lead.websiteURL || "N/A"}\nLinkedIn: ${lead.linkdinURL || "N/A"}\nIndustry: ${lead.industry || "N/A"}\nPriority: ${lead.priority || "N/A"}`
-                              );
+                            onClick={() => {               
+                              setViewLead(lead);
+                              setOpenViewDialog(true);
                             }}
                           >
                             <Eye className="mr-2 h-4 w-4" /> View
@@ -310,6 +308,28 @@ export default function LeadsPage() {
           toast.success("Lead updated successfully");
         }}
       />
+      {/* View Lead */}
+      <Dialog open={openViewDialog} onOpenChange={setOpenViewDialog}>
+        <DialogContent>
+          <DialogHeader>
+           <DialogTitle className="text-red-600">Lead Details</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <p><strong>websiteURL:</strong> {viewLead?.websiteURL || "N/A"}</p>
+            <p><strong>linkdinURL:</strong> {viewLead?.linkdinURL || "N/A"}</p>
+            <p><strong>Industry:</strong> {viewLead?.industry || "N/A"}</p>
+            <p><strong>WhatsApp Number:</strong> {viewLead?.whatsUpNumber || "N/A"}</p>
+            <p><strong>Status:</strong> {viewLead?.status || "N/A"}</p>
+            <p><strong>Priority:</strong> {viewLead?.priority || "N/A"}</p>
+          </div>
+          <DialogFooter className="flex justify-end">
+            <Button variant="destructive" onClick={() => setOpenViewDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete */}
       {confirmDelete && leadToDelete && (
         <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>

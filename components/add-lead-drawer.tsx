@@ -73,7 +73,7 @@ export default function AddLeadDrawer({
   onSaved,
   currentUserId,
 }: AddLeadDrawerProps) {
-const [email, setEmail] = useState<string[]>([""]);
+  const [email, setEmail] = useState<string[]>([""]);
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -181,7 +181,7 @@ const [email, setEmail] = useState<string[]>([""]);
     setIsSubmitting(true);
 
     try {
-        const payload = { ...formData, email }; 
+      const payload = { ...formData, email };
       await createOne(LEADS_ENDPOINT, payload);
       onSaved?.();
       onOpenChange(false);
@@ -218,13 +218,20 @@ const [email, setEmail] = useState<string[]>([""]);
             <Label>First Name</Label>
             <Input
               value={formData.firstName}
-              onChange={(e) => setFormData((s) => ({ ...s, firstName: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value
+                setFormData({ ...formData, firstName: value })
+                if (!value.trim()) {
+                  setErrors((prev) => ({ ...prev, firstName: "FirstName is required" }))
+                } else {
+                  setErrors((prev) => ({ ...prev, firstName: "" }))
+                }
+              }}
               placeholder="Enter first name"
               className={errors.firstName ? "border-red-500" : ""}
             />
             {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
           </div>
-
           <div>
             <Label>Email</Label>
             <div className="space-y-3">
@@ -298,40 +305,60 @@ const [email, setEmail] = useState<string[]>([""]);
               <p className="text-sm text-red-500">{errors.workEmail}</p>
             )}
           </div>
-
           <div>
             <Label>Website URL</Label>
             <Input
               value={formData.websiteURL}
-              onChange={(e) => setFormData((s) => ({ ...s, websiteURL: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData({ ...formData, websiteURL: value });
+                if (!value.trim()) {
+                  setErrors((prev) => ({ ...prev, websiteURL: "Website URL is required" }));
+                } else {
+                  setErrors((prev) => ({ ...prev, websiteURL: "" }));
+                }
+              }}
               placeholder="https://example.com"
               className={errors.websiteURL ? "border-red-500" : ""}
             />
             {errors.websiteURL && <p className="text-sm text-red-500">{errors.websiteURL}</p>}
           </div>
-
           <div>
             <Label>LinkedIn URL</Label>
             <Input
               value={formData.linkdinURL}
-              onChange={(e) => setFormData((s) => ({ ...s, linkdinURL: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData({ ...formData, linkdinURL: value });
+                if (!value.trim()) {
+                  setErrors((prev) => ({ ...prev, linkdinURL: "LinkedIn URL is required" }));
+                } else {
+                  setErrors((prev) => ({ ...prev, linkdinURL: "" }));
+                }
+              }}
               placeholder="https://linkedin.com/in/..."
               className={errors.linkdinURL ? "border-red-500" : ""}
             />
             {errors.linkdinURL && <p className="text-sm text-red-500">{errors.linkdinURL}</p>}
           </div>
-
           <div>
             <Label>Industry</Label>
             <Input
               value={formData.industry}
-              onChange={(e) => setFormData((s) => ({ ...s, industry: e.target.value }))}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData({ ...formData, industry: value });
+                if (!value.trim()) {
+                  setErrors((prev) => ({ ...prev, industry: "Industry is required" }));
+                } else {
+                  setErrors((prev) => ({ ...prev, industry: "" }));
+                }
+              }}
               placeholder="Enter industry"
               className={errors.industry ? "border-red-500" : ""}
             />
             {errors.industry && <p className="text-sm text-red-500">{errors.industry}</p>}
           </div>
-
           <div>
             <Label>WhatsApp Number</Label>
             <PhoneNumberField
