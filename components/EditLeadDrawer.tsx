@@ -72,6 +72,8 @@ export default function EditLeadDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+
+  //  preload form data when drawer opens
   useEffect(() => {
     if (open && leadData) {
       const emailList = Array.isArray(leadData.email) ? leadData.email : leadData.email ? [leadData.email] : [""];
@@ -110,6 +112,7 @@ export default function EditLeadDrawer({
         delete newErr[`email_${index}`];
         return newErr;
       });
+      setErrors({});
     }
   };
 
@@ -236,16 +239,22 @@ export default function EditLeadDrawer({
              placeholder="https://example.com" />
             {errors.websiteURL && <p className="text-sm text-red-500">{errors.websiteURL}</p>}
           </div>
+
+          {/* LinkedIn */}
           <div>
             <Label>LinkedIn URL</Label>
             <Input value={formData.linkdinURL} onChange={(e) => setFormData((s) => ({ ...s, linkdinURL: e.target.value }))} placeholder="https://linkedin.com/in/..." />
             {errors.linkdinURL && <p className="text-sm text-red-500">{errors.linkdinURL}</p>}
           </div>
+
+          {/* Industry */}
           <div>
             <Label>Industry</Label>
             <Input value={formData.industry} onChange={(e) => setFormData((s) => ({ ...s, industry: e.target.value }))} placeholder="Enter industry" />
             {errors.industry && <p className="text-sm text-red-500">{errors.industry}</p>}
           </div>
+
+          {/* Status */}
           <div>
             <Label>Status</Label>
             <Select value={formData.status} onValueChange={(value: any) => setFormData((s) => ({ ...s, status: value }))}>
@@ -256,6 +265,8 @@ export default function EditLeadDrawer({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Priority */}
           <div>
             <Label>Priority</Label>
             <Select value={formData.priority} onValueChange={(value: any) => setFormData((s) => ({ ...s, priority: value }))}>
