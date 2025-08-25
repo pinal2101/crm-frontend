@@ -15,7 +15,6 @@ export default function Pagination({
 }: PaginationProps) {
   if (totalPages <= 1) return null;
 
-  // Dynamic page numbers (with dots "…")
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
 
@@ -44,7 +43,7 @@ export default function Pagination({
   return (
     <div className="flex justify-center mt-1">
       <div className="flex items-center gap-2 px-6 py-3 rounded-full shadow-lg bg-white">
-        {/* Prev */}
+  
         <button
           className={cn(
             "w-10 h-10 flex items-center justify-center rounded-full shadow-md text-red-400",
@@ -56,7 +55,6 @@ export default function Pagination({
           &lt;
         </button>
 
-        {/* Pages */}
         {getPageNumbers().map((page, idx) =>
           page === "..." ? (
             <span key={idx} className="w-10 h-10 flex items-center justify-center text-gray-400">
@@ -78,7 +76,6 @@ export default function Pagination({
           )
         )}
 
-        {/* Next */}
         <button
           className={cn(
             "w-10 h-10 flex items-center justify-center rounded-full shadow-md text-red-400",
