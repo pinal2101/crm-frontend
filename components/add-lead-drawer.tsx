@@ -24,9 +24,11 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function PhoneNumberField({
   value,
   onChange,
+  hasError,
 }: {
   value: string;
   onChange: (val: string) => void;
+  hasError?: boolean;
 }) {
   const [error, setError] = useState("");
 
@@ -51,6 +53,7 @@ function PhoneNumberField({
         value={value}
         onChange={handleChange}
         maxLength={10}
+        className={hasError ? "border-red-500" : ""}
       />
       {error && <p className="text-red-500 text-sm">{error}</p>}
     </div>
@@ -119,7 +122,7 @@ const [email, setEmail] = useState<string[]>([""]);
     if (!formData.linkdinURL) newErrors.linkdinURL = "LinkedIn URL is required";
     if (!formData.industry) newErrors.industry = "Industry is required";
     if (!formData.whatsUpNumber) {
-      newErrors.whatsUpNumber = "WhatsApp number is required";
+      newErrors.whatsUpNumber = "";
     } else if (formData.whatsUpNumber.length < 10) {
       newErrors.whatsUpNumber = "WhatsApp number must be at least 10 digits";
     }
@@ -184,10 +187,16 @@ const [email, setEmail] = useState<string[]>([""]);
       onOpenChange(false);
     } catch (err: any) {
       console.error("Lead save failed:", err?.message || err);
-      setErrors((prev) => ({
-        ...prev,
-        form: err?.message || "Something went wrong",
-      }));
+      const server = err?.response?.data || err
+      let fieldErrors: Record<string, string> = {}
+      const message = server?.message || server?.error || err?.message || "Something went wrong"
+      if (server?.errors && typeof server.errors === 'object') {
+        Object.entries(server.errors).forEach(([key, val]) => {
+          const msg = Array.isArray(val) ? String(val[0]) : String(val)
+          fieldErrors[key] = msg
+        })
+      }
+      setErrors((prev) => ({ ...prev, ...fieldErrors, form: message }))
     } finally {
       setIsSubmitting(false);
     }
@@ -204,12 +213,14 @@ const [email, setEmail] = useState<string[]>([""]);
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+          {errors.form && <p className="text-sm text-red-500">{errors.form}</p>}
           <div>
             <Label>First Name</Label>
             <Input
               value={formData.firstName}
               onChange={(e) => setFormData((s) => ({ ...s, firstName: e.target.value }))}
               placeholder="Enter first name"
+              className={errors.firstName ? "border-red-500" : ""}
             />
             {errors.firstName && <p className="text-sm text-red-500">{errors.firstName}</p>}
           </div>
@@ -294,6 +305,7 @@ const [email, setEmail] = useState<string[]>([""]);
               value={formData.websiteURL}
               onChange={(e) => setFormData((s) => ({ ...s, websiteURL: e.target.value }))}
               placeholder="https://example.com"
+              className={errors.websiteURL ? "border-red-500" : ""}
             />
             {errors.websiteURL && <p className="text-sm text-red-500">{errors.websiteURL}</p>}
           </div>
@@ -304,6 +316,7 @@ const [email, setEmail] = useState<string[]>([""]);
               value={formData.linkdinURL}
               onChange={(e) => setFormData((s) => ({ ...s, linkdinURL: e.target.value }))}
               placeholder="https://linkedin.com/in/..."
+              className={errors.linkdinURL ? "border-red-500" : ""}
             />
             {errors.linkdinURL && <p className="text-sm text-red-500">{errors.linkdinURL}</p>}
           </div>
@@ -314,6 +327,7 @@ const [email, setEmail] = useState<string[]>([""]);
               value={formData.industry}
               onChange={(e) => setFormData((s) => ({ ...s, industry: e.target.value }))}
               placeholder="Enter industry"
+              className={errors.industry ? "border-red-500" : ""}
             />
             {errors.industry && <p className="text-sm text-red-500">{errors.industry}</p>}
           </div>
@@ -323,6 +337,7 @@ const [email, setEmail] = useState<string[]>([""]);
             <PhoneNumberField
               value={formData.whatsUpNumber}
               onChange={(val) => setFormData((s) => ({ ...s, whatsUpNumber: val }))}
+              hasError={Boolean(errors.whatsUpNumber)}
             />
             {errors.whatsUpNumber && <p className="text-sm text-red-500">{errors.whatsUpNumber}</p>}
           </div>
