@@ -7,8 +7,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { UsersIcon, User, LogOut } from "lucide-react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { toast } from "react-hot-toast";
 
+import { logout } from "@/app/utils/api"
 export default function DashboardLayout({
   children,
 }: {
@@ -18,29 +19,17 @@ export default function DashboardLayout({
   const router = useRouter()
 
 
-  const handleLogout = async() => {
-   const token =localStorage.getItem("token")
-   try{
-    const res =await fetch("http://localhost:8081/api/v1/auth/",{
-      method:'POST',
-      headers:{
-        "Content-Type":"application/json",
-        Authorization:token?? "",
-      }
-    })
-    const data =await res.json()
-    if(res.ok){
-      toast.success("Logout Successful ")
-    }else{
-      toast.error(`logout Failed:${data.message}`)
+    const handleLogout = async () => {
+    try {
+      await logout(); // call API
+      toast.success("Logout Successful");
+    } catch (error: any) {
+      toast.error(`Logout Failed: ${error.message || "Unknown error"}`);
+    } finally {
+      localStorage.removeItem("token");
+      router.push("/login");
     }
-   }catch(error){
-    toast.error("Something went wrong during logout :")
-   }
-   localStorage.removeItem("token")
-   
-   router.push('/login')
-  }
+  };
 
   const handleEditProfile = () => {
     router.push("/dashboard/profile")

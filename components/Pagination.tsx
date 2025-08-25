@@ -42,7 +42,7 @@ export default function Pagination({
   };
 
   return (
-    <div className="flex justify-center mt-6">
+    <div className="flex justify-center mt-1">
       <div className="flex items-center gap-2 px-6 py-3 rounded-full shadow-lg bg-white">
         {/* Prev */}
         <button
