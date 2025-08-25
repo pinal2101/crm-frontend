@@ -1,27 +1,26 @@
 "use client"
 import type React from "react"
 import { toast } from "react-hot-toast"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { createOne, updateOne } from "@/app/utils/api";
-import { log } from "console"
-
-
 
 interface AddUserDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved?: (user?: any) => void;
+  userData?: any | null
 }
 
 const AUTH_ENDPOINT = "auth";
  
-export function AddUserDrawer({ open, onOpenChange,onSaved }: AddUserDrawerProps) {
+export function AddUserDrawer({ open, onOpenChange,onSaved, userData }: AddUserDrawerProps) {
   const [formData, setFormData] = useState({
+    _id: undefined as string | undefined,
     firstName: '',
     lastName: '',
     email: "",
@@ -35,17 +34,67 @@ export function AddUserDrawer({ open, onOpenChange,onSaved }: AddUserDrawerProps
   const [password, setPassword] = useState("")
   const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/
 
+  const isEdit = Boolean(userData && (userData as any)._id)
+
+  useEffect(() => {
+    if (open) {
+      if (isEdit) {
+        setFormData({
+          _id: String((userData as any)._id),
+          firstName: String((userData as any).firstName ?? ''),
+          lastName: String((userData as any).lastName ?? ''),
+          email: String((userData as any).email ?? ''),
+          phoneNumber: String((userData as any).phoneNumber ?? ''),
+          password: '',
+          role: String((userData as any).role ?? 'Admin'),
+        })
+        setErrors({})
+      } else {
+        setFormData({
+          _id: undefined,
+          firstName: '',
+          lastName: '',
+          email: "",
+          phoneNumber: '',
+          password: '',
+          role: "Admin",
+        })
+        setErrors({})
+      }
+    } else {
+      // reset when closed
+      setFormData({
+        _id: undefined,
+        firstName: '',
+        lastName: '',
+        email: "",
+        phoneNumber: '',
+        password: '',
+        role: "Admin",
+      })
+      setErrors({})
+    }
+  }, [open, userData])
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!formData.firstName.trim()) newErrors.firstName = "First name is required"
-    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required"
-    if (!formData.email.trim()) newErrors.email = "Email is required"
-    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = "Phone number is required"
-    if (!formData.password.trim()) {
-      newErrors.password = "Password is required"
-    } else if (!strongPasswordRegex.test(formData.password)) {
-      newErrors.password = "Password must be at least 6 characters and include uppercase, lowercase, number and symbol"
+    const firstName = String(formData.firstName ?? '').trim()
+    const lastName = String(formData.lastName ?? '').trim()
+    const emailVal = String(formData.email ?? '').trim()
+    const phone = String(formData.phoneNumber ?? '').trim()
+    const passwordVal = String(formData.password ?? '').trim()
+
+    if (!firstName) newErrors.firstName = "First name is required"
+    if (!lastName) newErrors.lastName = "Last name is required"
+    if (!emailVal) newErrors.email = "Email is required"
+    if (!phone) newErrors.phoneNumber = "Phone number is required"
+    if (!isEdit) {
+      if (!passwordVal) {
+        newErrors.password = "Password is required"
+      } else if (!strongPasswordRegex.test(passwordVal)) {
+        newErrors.password = "Password must be at least 6 characters and include uppercase, lowercase, number and symbol"
+      }
     }
 
     setErrors(newErrors)
@@ -53,31 +102,46 @@ export function AddUserDrawer({ open, onOpenChange,onSaved }: AddUserDrawerProps
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log(e)
     e.preventDefault()
     if (!validateForm()) return
     setIsSubmitting(true)
    try {
-     console.log("Submitted Form Data:", formData) 
       if ((formData as any)._id) {
-        await updateOne(AUTH_ENDPOINT, (formData as any)._id, formData);
+        const { _id } = formData as any
+        const payload = {
+          firstName: String(formData.firstName ?? '').trim(),
+          lastName: String(formData.lastName ?? '').trim(),
+          email: String(formData.email ?? '').trim(),
+          phoneNumber: String(formData.phoneNumber ?? '').trim(),
+          role: String(formData.role ?? 'Admin') === 'SuperAdmin' ? 'SuperAdmin' : String(formData.role ?? 'Admin'),
+        }
+        await updateOne(AUTH_ENDPOINT, _id, payload);
         toast.success("User updated successfully ")
       } else {
-        await createOne("auth/register", formData);
-         toast.success("User created successfully ")
+        const create = {
+          firstName: String(formData.firstName ?? '').trim(),
+          lastName: String(formData.lastName ?? '').trim(),
+          email: String(formData.email ?? '').trim(),
+          phoneNumber: String(formData.phoneNumber ?? '').trim(),
+          password: String(formData.password ?? ''),
+          role: String(formData.role ?? 'Admin') === 'SuperAdmin' ? 'SuperAdmin' : String(formData.role ?? 'Admin'),
+        }
+        await createOne("auth/register", create);
+        toast.success("User created successfully ")
       }
       onSaved?.(formData) ;
       onOpenChange(false);
     }
-catch (error: any) {
+    catch (error: any) {
       console.error("Error during registration:", error.message)
-      toast.error(error.message || "Registration failed.Please try again.")
+      toast.error(error.message || "Please try again")
     } finally {
       setIsSubmitting(false)
     }
   }
   const handleCancel = () => {
     setFormData({
+      _id: undefined,
       firstName: '',
       lastName: '',
       email: "",
@@ -94,8 +158,10 @@ catch (error: any) {
       <Sheet open={open} onOpenChange={onOpenChange} >
         <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto max-h-screen">
           <SheetHeader>
-            <SheetTitle>Add New User</SheetTitle>
-            <SheetDescription>Fill in the information below to add a new user to the system.</SheetDescription>
+            <SheetTitle>{isEdit ? "Edit User" : "Add New User"}</SheetTitle>
+            <SheetDescription>
+              {isEdit ? "Update the user details." : "Fill in the information below to add a new user to the system."}
+            </SheetDescription>
           </SheetHeader>
 
           <form onSubmit={handleSubmit} className="space-y-6 mt-6">
@@ -171,33 +237,35 @@ catch (error: any) {
               />
               {errors.phoneNumber && <p className="text-sm text-red-500">{errors.phoneNumber}</p>}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password </Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => {
-                  const value = e.target.value
-                  setPassword(value)
-                  setFormData({ ...formData, password: e.target.value })
-                  if (value === "") {
-                    setErrors((prev) => ({ ...prev, password: "Password is required" }))
-                  } else if (!strongPasswordRegex.test(value)) {
-                    setErrors((prev) => ({
-                      ...prev,
-                      password:
-                        "Password must be at least 6 characters and include uppercase, lowercase, number and symbol",
-                    }))
-                  } else {
-                    setErrors((prev) => ({ ...prev, password: "" }))
-                  }
-                }}
-                placeholder="Enter password"
-                className={errors.password ? "border-red-500" : ""}
-              />
-              {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
-            </div>
+            {!isEdit && (
+              <div className="space-y-2">
+                <Label htmlFor="password">Password </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    setPassword(value)
+                    setFormData({ ...formData, password: e.target.value })
+                    if (value === "") {
+                      setErrors((prev) => ({ ...prev, password: "Password is required" }))
+                    } else if (!strongPasswordRegex.test(value)) {
+                      setErrors((prev) => ({
+                        ...prev,
+                        password:
+                          "Password must be at least 6 characters and include uppercase, lowercase, number and symbol",
+                      }))
+                    } else {
+                      setErrors((prev) => ({ ...prev, password: "" }))
+                    }
+                  }}
+                  placeholder="Enter password"
+                  className={errors.password ? "border-red-500" : ""}
+                />
+                {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
@@ -216,7 +284,7 @@ catch (error: any) {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Adding..." : "Submit"}
+                {isSubmitting ? (isEdit ? "Saving..." : "Adding...") : (isEdit ? "Save" : "Submit")}
               </Button>
             </div>
           </form>

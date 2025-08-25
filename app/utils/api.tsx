@@ -76,3 +76,13 @@ export const deleteOne = async (endpoint: string, id: string) => {
     throw error.response?.data || error.message;
   }
 };
+
+// LOGOUT
+export const logout = async () => {
+  try {
+    const response = await api.post("/auth/logout"); 
+    return response.data;
+  } catch (error: any) {
+    throw error.response?.data || error.message;
+  }
+};
