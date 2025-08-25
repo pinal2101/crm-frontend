@@ -105,6 +105,7 @@ export function AddUserDrawer({ open, onOpenChange,onSaved, userData }: AddUserD
     e.preventDefault()
     if (!validateForm()) return
     setIsSubmitting(true)
+    console
    try {
       if ((formData as any)._id) {
         const { _id } = formData as any
@@ -133,9 +134,30 @@ export function AddUserDrawer({ open, onOpenChange,onSaved, userData }: AddUserD
       onOpenChange(false);
     }
     catch (error: any) {
-      console.error("Error during registration:", error.message)
-      toast.error(error.message || "Please try again")
-    } finally {
+  console.error("Error during registration:", error);
+
+  if (error.response) {
+    console.log("11")
+    if (error.response.status === 404) {
+      toast.error("User not found (404)");
+    } else if (error.response.status === 400) {
+      toast.error(error.response.data.message || "Bad Request");
+    } else if (error.response.status === 500) {
+      toast.error("Internal Server Error. Please try again later.");
+    } else {
+      toast.error(error.response.data.message || "Something went wrong");
+    }
+
+  } else if (error.request) {
+    
+    toast.error("No response from server. Please check your network.");
+    console.log("22")
+  } else {
+    toast.error(error.message || "Unexpected error occurred");
+    console.log("33")
+  }
+}
+ finally {
       setIsSubmitting(false)
     }
   }
@@ -164,7 +186,7 @@ export function AddUserDrawer({ open, onOpenChange,onSaved, userData }: AddUserD
             </SheetDescription>
           </SheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+          <form onSubmit={handleSubmit} className="space-y-6 mt-6" noValidate>
 
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
@@ -216,13 +238,18 @@ export function AddUserDrawer({ open, onOpenChange,onSaved, userData }: AddUserD
               <Label htmlFor="phoneNumber">Phone Number </Label>
               <Input
                 id="phoneNumber"
+                type="tel"
+                inputMode="numeric"
+                pattern="\\d*"
+                maxLength={10}
                 value={formData.phoneNumber}
                 onChange={(e) => {
-                  const value = e.target.value
-                  setFormData({ ...formData, phoneNumber: value })
-                  if (value === "") {
+                  const raw = e.target.value
+                  const digitsOnly = raw.replace(/\D/g, "").slice(0, 10)
+                  setFormData({ ...formData, phoneNumber: digitsOnly })
+                  if (digitsOnly === "") {
                     setErrors((prev) => ({ ...prev, phoneNumber: "Phone number is required" }))
-                  } else if (!/^\d{10}$/.test(value)) {
+                  } else if (!/^\d{10}$/.test(digitsOnly)) {
                     setErrors((prev) => ({
                       ...prev,
                       phoneNumber: "Phone number must be 10 digits only",
