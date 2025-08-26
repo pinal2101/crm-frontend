@@ -42,7 +42,7 @@ import {
   Search,
   Filter,
   MoreHorizontal,
-  Pencil,
+  Edit,
   Trash2,
   Eye,
 } from "lucide-react";
@@ -249,7 +249,7 @@ export default function LeadsPage() {
                         <DropdownMenuContent>
 
                           <DropdownMenuItem
-                            onClick={() => {               
+                            onClick={() => {
                               setViewLead(lead);
                               setOpenViewDialog(true);
                             }}
@@ -258,7 +258,7 @@ export default function LeadsPage() {
                           </DropdownMenuItem>
 
                           <DropdownMenuItem onClick={() => handleEdit(lead)}>
-                            <Pencil className="mr-2 h-4 w-4" /> Edit
+                            <Edit className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
 
                           <DropdownMenuItem
@@ -312,7 +312,7 @@ export default function LeadsPage() {
       <Dialog open={openViewDialog} onOpenChange={setOpenViewDialog}>
         <DialogContent>
           <DialogHeader>
-           <DialogTitle className="text-red-600">Lead Details</DialogTitle>
+            <DialogTitle className="text-red-600">Lead Details</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-2">
             <p><strong>websiteURL:</strong> {viewLead?.websiteURL || "N/A"}</p>
