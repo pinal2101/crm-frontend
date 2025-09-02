@@ -1,13 +1,14 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://localhost:8081/api/v1";
+const NEXT_PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE as string;
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: NEXT_PUBLIC_API_BASE,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
 //token automatically save
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
