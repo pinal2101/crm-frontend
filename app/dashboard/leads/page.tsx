@@ -151,7 +151,7 @@ export default function LeadsPage() {
         <div className="relative flex-1 max-w-auto">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
-            placeholder="Search firstName, email "
+            placeholder="Search by firstName or email "
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
